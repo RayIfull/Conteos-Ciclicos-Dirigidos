@@ -37,11 +37,11 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    const fbGet  = (path) => db.ref(path).get().then(s => s.val());
-    const fbSet  = (path, data) => db.ref(path).set(data);
-    const fbPush = (path, data) => db.ref(path).push(data);
-    const fbDel  = (path) => db.ref(path).remove();
-    const fbOn   = (path, cb) => { const ref = db.ref(path); ref.on("value", s => cb(s.val())); return () => ref.off(); };
+    const fbGet  = (path) => db.ref(path || "/").get().then(s => s.val()).catch(() => null);
+    const fbSet  = (path, data) => db.ref(path).set(data).catch(console.error);
+    const fbPush = (path, data) => db.ref(path).push(data).catch(console.error);
+    const fbDel  = (path) => db.ref(path).remove().catch(console.error);
+    const fbOn = (path, cb) => { const ref = db.ref(path || "/"); const h = s => { try { cb(s.val() || {}); } catch(e) { console.error(e); } }; ref.on("value", h, e => console.error(e)); return () => ref.off("value", h); };
 
     // ─── CLIENTES ─────────────────────────────────────────────────────────────
     const CLIENTES = {
@@ -408,7 +408,7 @@
       const [copied, setCopied] = React.useState(false);
 
       React.useEffect(() => {
-        const off = fbOn("", data => setFbData(data || {}));
+        const off = fbOn("/", data => setFbData(data || {}));
         return off;
       }, []);
 
@@ -556,7 +556,12 @@
       );
     }
 
-    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+    try {
+      ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+    } catch(e) {
+      console.error("Render error:", e);
+      document.getElementById("root").innerHTML = '<div style="padding:40px;color:#FF5555;font-family:monospace;text-align:center"><p style="font-size:18px;font-weight:800">⚠ Error al cargar la app</p><p style="margin-top:10px;color:#aaa;font-size:13px">Revisa la consola del navegador (F12)</p><button onclick="location.reload()" style="margin-top:20px;padding:14px 28px;background:#C8AEFF;border:none;border-radius:10px;font-size:16px;cursor:pointer;font-weight:800">Reintentar</button></div>';
+    }
   </script>
 </body>
 </html>
