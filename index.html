@@ -1,18 +1,19 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
   <title>Conteo Cruzado</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    *{margin:0;padding:0;box-sizing:border-box;}
     input[type=number]::-webkit-inner-spin-button,
-    input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-    input[type=number] { -moz-appearance: textfield; appearance: textfield; }
-    body { background: #12151E; font-family: 'Courier New', Courier, monospace; color: #F0F0F0; }
-    #root { min-height: 100vh; }
-    ::-webkit-scrollbar { width: 4px; } ::-webkit-scrollbar-track { background: #1C2030; }
-    ::-webkit-scrollbar-thumb { background: #4A4D5A; border-radius: 4px; }
+    input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}
+    input[type=number]{-moz-appearance:textfield;appearance:textfield;}
+    body{background:#12151E;font-family:'Courier New',Courier,monospace;color:#F0F0F0;}
+    #root{min-height:100vh;}
+    ::-webkit-scrollbar{width:4px;}
+    ::-webkit-scrollbar-track{background:#1C2030;}
+    ::-webkit-scrollbar-thumb{background:#4A4D5A;border-radius:4px;}
   </style>
 </head>
 <body>
@@ -23,16 +24,15 @@
 <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 <script type="text/babel">
-
-// ── FIREBASE ─────────────────────────────────────────────────────────────────
+// ── FIREBASE ──────────────────────────────────────────────────────────────────
 firebase.initializeApp({
-  apiKey: "AIzaSyCwiWFATCtNa-IdsUSXey9-OVj9cD2okfA",
-  authDomain: "conteos-ciclicos-dirigidos.firebaseapp.com",
-  databaseURL: "https://conteos-ciclicos-dirigidos-default-rtdb.firebaseio.com",
-  projectId: "conteos-ciclicos-dirigidos",
-  storageBucket: "conteos-ciclicos-dirigidos.firebasestorage.app",
-  messagingSenderId: "1075522216092",
-  appId: "1:1075522216092:web:02c3c1c5763b89d3b40d59"
+  apiKey:"AIzaSyCwiWFATCtNa-IdsUSXey9-OVj9cD2okfA",
+  authDomain:"conteos-ciclicos-dirigidos.firebaseapp.com",
+  databaseURL:"https://conteos-ciclicos-dirigidos-default-rtdb.firebaseio.com",
+  projectId:"conteos-ciclicos-dirigidos",
+  storageBucket:"conteos-ciclicos-dirigidos.firebasestorage.app",
+  messagingSenderId:"1075522216092",
+  appId:"1:1075522216092:web:02c3c1c5763b89d3b40d59"
 });
 const db = firebase.database();
 const fbGet  = (p) => db.ref(p||"/").get().then(s=>s.val()).catch(()=>null);
@@ -41,19 +41,17 @@ const fbPush = (p,d) => db.ref(p).push(d).catch(console.error);
 const fbDel  = (p) => db.ref(p).remove().catch(console.error);
 const fbOn   = (p,cb) => {
   const ref = db.ref(p||"/");
-  const h = s => { try { cb(s.val()||{}); } catch(e){ console.error(e); } };
-  ref.on("value", h, e=>console.error(e));
-  return () => ref.off("value", h);
+  const h = s => { try{ cb(s.val()||{}); }catch(e){ console.error(e); } };
+  ref.on("value",h,e=>console.error(e));
+  return ()=>ref.off("value",h);
 };
 
-// ── HELPERS ───────────────────────────────────────────────────────────────────
-    const sanitizeKey = s => s.replace(/[.#$[\]\s\/]/g,"-");
-const makeKey = (ub,sku) => sanitizeKey(ub+"__"+sku.toUpperCase());
-const ts = () => new Date().toLocaleTimeString("es-MX",{hour:"2-digit",minute:"2-digit"});
-const uid = () => Math.random().toString(36).slice(2,9);
-const dateStr = () => new Date().toLocaleDateString("es-MX");
+// ── CONSTANTES ────────────────────────────────────────────────────────────────
+const SUPERVISOR_PIN = "9729";
+const RECEPCIONISTA_PIN = "1357";
+const ROLES_NORMAL = ["Capturista","Contador"];
+const ROLES_AUDITORIA = ["Capturista","Auditor"];
 
-// ── CLIENTES ──────────────────────────────────────────────────────────────────
 const PALETTE = [
   {color:"#00E6A8",dark:"#0A2E22"},{color:"#FF7A45",dark:"#2E1206"},
   {color:"#7B9FFF",dark:"#0A1230"},{color:"#FFD166",dark:"#2E2200"},
@@ -74,371 +72,412 @@ const CLIENTES_LIST = [
   "FERRAFORME TEX 2","TANDERA","PAROLERA"
 ];
 const CLIENTES = Object.fromEntries(CLIENTES_LIST.map((nombre,i)=>{
-  const p = PALETTE[i%PALETTE.length];
-  const key = nombre.toUpperCase().replace(/\s+/g,"_");
-  return [key,{nombre, color:p.color, dark:p.dark,
-    ubicacionPlaceholder:"Ej: B/13/N2 o SUELO-Z1",
-    ubicacionHint:"Rack: LETRA/POSICIÓN/NIVEL  ·  Suelo: zona o referencia",
-    skuPlaceholder:"SKU o código de barras"}];
+  const p=PALETTE[i%PALETTE.length];
+  return [nombre.toUpperCase().replace(/\s+/g,"_"),
+    {nombre,color:p.color,dark:p.dark,
+     ubicacionPlaceholder:"Ej: B/13/N2 o SUELO-Z1",
+     ubicacionHint:"Rack: LETRA/POSICIÓN/NIVEL  ·  Suelo: zona o referencia",
+     skuPlaceholder:"SKU o código de barras"}];
 }));
 
-const SUPERVISOR_PIN = "9729";
-const RECEPCIONISTA_PIN = "1357";
-const eqPath = (clienteKey) => clienteKey ? `clientes/${clienteKey}/equipos` : "equipos_sin_cliente";
-const ROLES_NORMAL = ["Capturista","Contador"];
-const ROLES_AUDITORIA = ["Capturista","Auditor"];
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+const sanitizeKey = s => s.replace(/[\.\#\$\[\]\s\/]/g,"-");
+const makeKey = (ub,sku) => sanitizeKey(ub+"__"+sku.toUpperCase());
+const ts  = () => new Date().toLocaleTimeString("es-MX",{hour:"2-digit",minute:"2-digit"});
+const uid = () => Math.random().toString(36).slice(2,9);
+const dateStr = () => new Date().toLocaleDateString("es-MX");
+const eqPath  = (ck) => ck ? "clientes/"+ck+"/equipos" : "equipos_sin_cliente";
 
 // ── CROSS MAP ─────────────────────────────────────────────────────────────────
-function buildCrossMap(equipos, registros, validaciones) {
-  const map = {};
-  const eqIds = Object.keys(equipos||{});
-  eqIds.forEach(eqId => {
-    const regsObj = registros?.[eqId]||{};
-    Object.entries(regsObj).forEach(([fbId,reg]) => {
-      (reg.skus||[]).forEach(s => {
-        const key = makeKey(reg.ubicacion, s.sku);
-        if (!map[key]) map[key] = { ubicacion:reg.ubicacion, sku:s.sku.toUpperCase(), validado:null, equipos:{} };
-        map[key].equipos[eqId] = { cantidad:s.cantidad, fbId, nota:reg.nota||"", duracionMins:reg.duracionMins||null, totalPiezas:reg.totalPiezas||null };
+function buildCrossMap(equipos,registros,validaciones){
+  const map={};
+  Object.keys(equipos||{}).forEach(eqId=>{
+    Object.entries(registros&&registros[eqId]||{}).forEach(([fbId,reg])=>{
+      (reg.skus||[]).forEach(s=>{
+        const key=makeKey(reg.ubicacion,s.sku);
+        if(!map[key]) map[key]={ubicacion:reg.ubicacion,sku:s.sku.toUpperCase(),validado:null,equipos:{}};
+        map[key].equipos[eqId]={cantidad:s.cantidad,fbId,nota:reg.nota||"",duracionMins:reg.duracionMins||null,totalPiezas:reg.totalPiezas||null};
       });
     });
   });
-  const vals = validaciones||{};
-  Object.keys(map).forEach(k => { map[k].validado = vals[k]!==undefined ? vals[k] : null; });
+  const vals=validaciones||{};
+  Object.keys(map).forEach(k=>{map[k].validado=vals[k]!==undefined?vals[k]:null;});
   return Object.values(map).sort((a,b)=>a.ubicacion.localeCompare(b.ubicacion)||a.sku.localeCompare(b.sku));
 }
-
-function getStatus(row, eqIds) {
-  if (row.validado!==null && row.validado!==undefined) return "validado";
-  const counts = eqIds.map(id=>row.equipos[id]?.cantidad??null).filter(v=>v!==null);
-  if (counts.length < eqIds.length) return "incompleto";
-  return counts.every(v=>v===counts[0]) ? "ok" : "discrepancia";
+function getStatus(row,eqIds){
+  if(row.validado!==null&&row.validado!==undefined) return "validado";
+  const counts=eqIds.map(id=>row.equipos[id]?.cantidad??null).filter(v=>v!==null);
+  if(counts.length<eqIds.length) return "incompleto";
+  return counts.every(v=>v===counts[0])?"ok":"discrepancia";
 }
-
-const STATUS_CFG = {
-  ok:           {label:"✓ Coincide",     color:"#00E6A8", bg:"#00E6A820"},
-  discrepancia: {label:"⚠ Discrepancia", color:"#FF5555", bg:"#FF555520"},
-  incompleto:   {label:"◌ Incompleto",   color:"#D0D4E8", bg:"#D0D4E810"},
-  validado:     {label:"✓✓ Validado",    color:"#C8AEFF", bg:"#C8AEFF20"},
+const STATUS_CFG={
+  ok:         {label:"✓ Coincide",    color:"#00E6A8",bg:"#00E6A820"},
+  discrepancia:{label:"⚠ Discrepancia",color:"#FF5555",bg:"#FF555520"},
+  incompleto: {label:"◌ Incompleto",  color:"#D0D4E8",bg:"#D0D4E810"},
+  validado:   {label:"✓✓ Validado",   color:"#C8AEFF",bg:"#C8AEFF20"},
 };
 
 // ── ESTILOS ───────────────────────────────────────────────────────────────────
-const S = {
+const S={
   root:{minHeight:"100vh",background:"#12151E",color:"#F0F0F0",fontFamily:"'Courier New',Courier,monospace",paddingBottom:40},
   center:{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:"#12151E"},
-  hdr:{padding:"32px 24px 20px",textAlign:"center",borderBottom:"2px solid #3A3D4A"},
-  logo:{fontSize:38,color:"#C8AEFF",marginBottom:8},
-  ttl:{fontSize:28,fontWeight:900,letterSpacing:4,margin:"0 0 8px",color:"#FFFFFF"},
-  sub:{color:"#C0C4D8",fontSize:13,letterSpacing:2,margin:0,fontWeight:600},
-  secLbl:{fontSize:12,letterSpacing:3,color:"#C0C4D8",textTransform:"uppercase",marginBottom:12,fontWeight:800,display:"block"},
+  hdr:{padding:"28px 24px 20px",textAlign:"center",borderBottom:"2px solid #3A3D4A"},
+  logo:{fontSize:34,color:"#C8AEFF",marginBottom:6},
+  ttl:{fontSize:26,fontWeight:900,letterSpacing:4,margin:"0 0 6px",color:"#FFFFFF"},
+  sub:{color:"#C0C4D8",fontSize:12,letterSpacing:2,margin:0,fontWeight:600},
+  secLbl:{fontSize:11,letterSpacing:3,color:"#C0C4D8",textTransform:"uppercase",marginBottom:10,fontWeight:800,display:"block"},
   nav:{display:"flex",alignItems:"center",gap:10,padding:"12px 16px",borderBottom:"3px solid"},
   navBtn:{background:"#2A2D3A",border:"2px solid #8A8FA8",color:"#FFFFFF",borderRadius:8,padding:"9px 14px",fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit"},
   resetBtn:{background:"#2A1515",border:"2px solid #FF5555",color:"#FF5555",borderRadius:8,padding:"9px 14px",fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit"},
-  card:{background:"#1C2030",border:"2px solid #3A3D4A",borderRadius:14,padding:"18px 16px"},
-  lbl:{fontSize:12,letterSpacing:2,color:"#D0D4E8",textTransform:"uppercase",display:"block",marginBottom:7,fontWeight:800},
-  hint:{fontSize:12,color:"#A0A4B8",marginTop:5,display:"block",fontWeight:600},
+  card:{background:"#1C2030",border:"2px solid #3A3D4A",borderRadius:14,padding:"16px"},
+  lbl:{fontSize:11,letterSpacing:2,color:"#D0D4E8",textTransform:"uppercase",display:"block",marginBottom:6,fontWeight:800},
+  hint:{fontSize:11,color:"#A0A4B8",marginTop:4,display:"block",fontWeight:600},
   inp:{background:"#0E1016",border:"2px solid #4A4D5A",borderRadius:9,color:"#FFFFFF",fontFamily:"'Courier New',monospace",fontSize:15,padding:"12px 13px",outline:"none",width:"100%",boxSizing:"border-box"},
   inpErr:{borderColor:"#FF5555"},
-  errMsg:{color:"#FF5555",fontSize:12,marginTop:4,display:"block",fontWeight:800},
+  errMsg:{color:"#FF5555",fontSize:11,marginTop:3,display:"block",fontWeight:800},
   solidBtn:{border:"none",borderRadius:12,padding:"14px",fontSize:15,fontWeight:900,letterSpacing:1,cursor:"pointer",fontFamily:"inherit",width:"100%",display:"block"},
-  textBtn:{background:"none",border:"none",color:"#C0C4D8",cursor:"pointer",fontFamily:"inherit",fontSize:14,display:"block",textAlign:"center",marginTop:12,width:"100%",padding:10,fontWeight:700},
-  pinCard:{background:"#1C2030",border:"2px solid #4A4D5A",borderRadius:18,padding:"32px 24px",width:"300px"},
-  cambiarBtn:{background:"#2A2D3A",border:"2px solid #8A8FA8",color:"#FFFFFF",borderRadius:10,padding:"10px 16px",fontSize:14,fontWeight:800,cursor:"pointer",fontFamily:"inherit"},
-  supBtn:{width:"100%",background:"#1E1A30",border:"2px solid #8A6FCC",borderRadius:14,color:"#E0CCFF",fontFamily:"inherit",fontSize:17,fontWeight:900,padding:"17px",cursor:"pointer",letterSpacing:1},
+  textBtn:{background:"none",border:"none",color:"#C0C4D8",cursor:"pointer",fontFamily:"inherit",fontSize:14,display:"block",textAlign:"center",marginTop:10,width:"100%",padding:8,fontWeight:700},
+  pinCard:{background:"#1C2030",border:"2px solid #4A4D5A",borderRadius:18,padding:"28px 22px",width:"300px"},
+  cambiarBtn:{background:"#2A2D3A",border:"2px solid #8A8FA8",color:"#FFFFFF",borderRadius:10,padding:"9px 14px",fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit"},
 };
 
-// ── MODALES ───────────────────────────────────────────────────────────────────
-function ConfirmModal({title, message, confirmLabel, confirmColor="#FF5555", onConfirm, onCancel}) {
-  return (
+// ── COMPONENTES COMUNES ───────────────────────────────────────────────────────
+function ConfirmModal({title,message,confirmLabel,confirmColor="#FF5555",onConfirm,onCancel}){
+  return(
     <div style={{position:"fixed",inset:0,background:"#000000EE",zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
-      <div style={{background:"#1C2030",border:`3px solid ${confirmColor}`,borderRadius:18,padding:"28px 22px",maxWidth:340,width:"100%",textAlign:"center"}}>
-        <div style={{fontSize:40,marginBottom:10}}>⚠️</div>
-        <p style={{color:"#FFFFFF",fontSize:17,fontWeight:900,marginBottom:8}}>{title}</p>
-        <p style={{color:"#C0C4D8",fontSize:13,marginBottom:24,lineHeight:1.7}}>{message}</p>
+      <div style={{background:"#1C2030",border:"3px solid "+confirmColor,borderRadius:18,padding:"26px 20px",maxWidth:340,width:"100%",textAlign:"center"}}>
+        <div style={{fontSize:38,marginBottom:10}}>⚠️</div>
+        <p style={{color:"#FFFFFF",fontSize:16,fontWeight:900,marginBottom:8}}>{title}</p>
+        <p style={{color:"#C0C4D8",fontSize:13,marginBottom:22,lineHeight:1.7}}>{message}</p>
         <div style={{display:"flex",gap:10}}>
-          <button style={{flex:1,background:"#2A2D3A",border:"2px solid #8A8FA8",color:"#FFFFFF",borderRadius:12,padding:"13px",fontSize:14,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}} onClick={onCancel}>Cancelar</button>
-          <button style={{flex:1,background:confirmColor,border:"none",color:"#FFFFFF",borderRadius:12,padding:"13px",fontSize:14,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}} onClick={onConfirm}>{confirmLabel}</button>
+          <button style={{flex:1,background:"#2A2D3A",border:"2px solid #8A8FA8",color:"#FFFFFF",borderRadius:12,padding:"12px",fontSize:14,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}} onClick={onCancel}>Cancelar</button>
+          <button style={{flex:1,background:confirmColor,border:"none",color:"#FFFFFF",borderRadius:12,padding:"12px",fontSize:14,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}} onClick={onConfirm}>{confirmLabel}</button>
         </div>
       </div>
     </div>
   );
 }
-
-function Badge({status}) {
-  const c = STATUS_CFG[status];
-  return <span style={{fontSize:11,fontWeight:800,color:c.color,border:`2px solid ${c.color}`,borderRadius:6,padding:"3px 9px",background:c.bg,whiteSpace:"nowrap"}}>{c.label}</span>;
+function Badge({status}){
+  const c=STATUS_CFG[status];
+  return <span style={{fontSize:11,fontWeight:800,color:c.color,border:"2px solid "+c.color,borderRadius:6,padding:"3px 9px",background:c.bg,whiteSpace:"nowrap"}}>{c.label}</span>;
+}
+function PinScreen({titulo,emoji,accentColor,pinCorrecto,onSuccess,onBack}){
+  const [pin,setPin]=React.useState("");
+  const [err,setErr]=React.useState(false);
+  const check=()=>{ if(pin===pinCorrecto){onSuccess();}else{setErr(true);setPin("");} };
+  return(
+    <div style={S.center}>
+      <div style={S.pinCard}>
+        <div style={{fontSize:32,marginBottom:8,textAlign:"center"}}>{emoji}</div>
+        <p style={{color:"#FFFFFF",letterSpacing:2,fontSize:14,fontWeight:800,textAlign:"center",marginBottom:16}}>{titulo}</p>
+        <input style={{...S.inp,textAlign:"center",fontSize:26,fontWeight:900,letterSpacing:10}}
+          type="password" inputMode="numeric" maxLength={4} value={pin}
+          onChange={e=>{setPin(e.target.value);setErr(false);}} placeholder="••••"
+          onKeyDown={e=>e.key==="Enter"&&check()}/>
+        {err&&<p style={{color:"#FF5555",fontSize:12,fontWeight:800,textAlign:"center",marginTop:8}}>PIN incorrecto</p>}
+        <button style={{...S.solidBtn,background:accentColor,color:"#0A0820",marginTop:14}} onClick={check}>Entrar</button>
+        <button style={S.textBtn} onClick={onBack}>← Volver</button>
+      </div>
+    </div>
+  );
+}
+function ClienteSelector({onSelect,selectedKey}){
+  return(
+    <div style={{display:"flex",flexDirection:"column",gap:6,maxHeight:260,overflowY:"auto",border:"2px solid #2E3240",borderRadius:12,padding:"7px"}}>
+      {Object.entries(CLIENTES).map(([k,c])=>(
+        <button key={k} style={{borderLeft:"4px solid "+(selectedKey===k?c.color:"#3A3D4A"),background:selectedKey===k?c.dark:"transparent",border:"none",borderLeft:"4px solid "+(selectedKey===k?c.color:"#3A3D4A"),borderRadius:9,padding:"11px 14px",display:"flex",alignItems:"center",gap:10,cursor:"pointer",textAlign:"left"}}
+          onClick={()=>onSelect(k)}>
+          <span style={{width:8,height:8,borderRadius:"50%",background:c.color,flexShrink:0}}/>
+          <span style={{color:selectedKey===k?c.color:"#FFFFFF",fontWeight:selectedKey===k?900:600,fontSize:14}}>{c.nombre}</span>
+          {selectedKey===k&&<span style={{marginLeft:"auto",color:c.color}}>✓</span>}
+        </button>
+      ))}
+    </div>
+  );
 }
 
-// ── APP ───────────────────────────────────────────────────────────────────────
-function App() {
-  const [mode, setMode] = React.useState(null);
-  const [pin, setPin] = React.useState("");
-  const [pinError, setPinError] = React.useState(false);
-  const [clienteKey, setClienteKey] = React.useState(null);
-  const [equipos, setEquipos] = React.useState({});
-  const [confirmReset, setConfirmReset] = React.useState(false);
-  const [fbReady, setFbReady] = React.useState(false);
-
-  React.useEffect(()=>{
-    fbGet("sesion/cliente").then(async k => {
-      if(k && CLIENTES[k]) {
-        setClienteKey(k);
-        const eqs = await fbGet(eqPath(k));
-        if(eqs) setEquipos(eqs);
-      }
-      setFbReady(true);
-    }).catch(()=>setFbReady(true));
-  },[]);
-
-  React.useEffect(()=>{
-    if (!clienteKey) { setEquipos({}); return; }
-    const off = fbOn(eqPath(clienteKey), data=>setEquipos(data||{}));
-    return off;
-  },[clienteKey]);
-
-  const handleSetCliente = async (key) => {
-    await fbSet("sesion/cliente", key||null);
-    setClienteKey(key);
-    if (key) {
-      const eqs = await fbGet(eqPath(key));
-      setEquipos(eqs||{});
-    } else {
-      setEquipos({});
-    }
-  };
-
-  const handleReset = async () => {
-    const [snap, eqs] = await Promise.all([
-      fbGet("/"),
-      clienteKey ? fbGet(eqPath(clienteKey)) : Promise.resolve({})
-    ]);
-    if (snap) {
-      const safeEqs = eqs||{};
-      const cross = buildCrossMap(safeEqs, snap.registros||{}, snap.validaciones||{});
-      const eqIds = Object.keys(safeEqs);
-      await fbSet(`historial/sesion_${Date.now()}`,{
-        cliente:snap.sesion?.cliente||"DESCONOCIDO",
-        fecha:dateStr(), hora:ts(),
-        totalRegistros:cross.length,
-        discrepancias:cross.filter(r=>getStatus(r,eqIds)==="discrepancia").length,
-        validados:cross.filter(r=>getStatus(r,eqIds)==="validado").length,
-        equipos:safeEqs, registros:snap.registros||{}, validaciones:snap.validaciones||{},
-      });
-    }
-    await fbDel("registros");
-    await fbDel("validaciones");
-    await fbSet("sesion/cliente", null);
-    // Keep equipos per client - they persist
-    setClienteKey(null); setEquipos({}); setMode(null); setConfirmReset(false);
-  };
-
-  if (!fbReady) return (
-    <div style={S.center}><span style={{color:"#C0C4D8",letterSpacing:4,fontSize:14,fontWeight:700}}>CONECTANDO...</span></div>
-  );
-
-  const eqList = Object.entries(equipos);
-  const activeEquipoId = mode?.startsWith("equipo:") ? mode.split(":")[1] : null;
-
-  if (!mode) return (
+// ── PANTALLA DE SELECCIÓN DE ACTIVIDAD ────────────────────────────────────────
+function ActivitySelector({onSelect}){
+  return(
     <div style={S.root}>
-      {confirmReset && (
-        <ConfirmModal title="¿Reiniciar conteo?"
-          message="Se borrarán todos los registros y validaciones. Los equipos configurados se conservan. Esta acción no se puede deshacer."
-          confirmLabel="Sí, reiniciar" onConfirm={handleReset} onCancel={()=>setConfirmReset(false)}/>
-      )}
       <div style={S.hdr}>
         <div style={S.logo}>◈</div>
-        <h1 style={S.ttl}>CONTEO CRUZADO</h1>
-        <p style={S.sub}>Sistema de inventario con verificación</p>
-        <div style={{display:"inline-flex",alignItems:"center",gap:6,marginTop:10,background:"#00E6A820",border:"1px solid #00E6A8",borderRadius:20,padding:"3px 12px"}}>
+        <h1 style={S.ttl}>CONTROL DE ALMACÉN</h1>
+        <p style={S.sub}>Selecciona la actividad a realizar</p>
+        <div style={{display:"inline-flex",alignItems:"center",gap:6,marginTop:8,background:"#00E6A820",border:"1px solid #00E6A8",borderRadius:20,padding:"3px 12px"}}>
           <span style={{width:7,height:7,borderRadius:"50%",background:"#00E6A8",display:"inline-block"}}/>
           <span style={{color:"#00E6A8",fontSize:10,fontWeight:700,letterSpacing:1}}>EN LÍNEA · FIREBASE</span>
         </div>
       </div>
-
-      <div style={{padding:"18px"}}>
-        {!clienteKey ? (
-          <>
-            <span style={S.secLbl}>Selecciona cliente</span>
-            <div style={{display:"flex",flexDirection:"column",gap:7,maxHeight:280,overflowY:"auto",border:"2px solid #2E3240",borderRadius:12,padding:"8px",marginBottom:18}}>
-              {Object.entries(CLIENTES).map(([k,c])=>(
-                <button key={k} style={{borderLeft:`4px solid ${c.color}`,background:c.dark,border:"none",borderLeft:`4px solid ${c.color}`,borderRadius:10,padding:"12px 16px",display:"flex",alignItems:"center",gap:12,cursor:"pointer",textAlign:"left"}}
-                  onClick={()=>handleSetCliente(k)}>
-                  <span style={{width:9,height:9,borderRadius:"50%",background:c.color,flexShrink:0}}/>
-                  <span style={{color:"#FFFFFF",fontWeight:800,fontSize:15}}>{c.nombre}</span>
-                </button>
-              ))}
-            </div>
-          </>
-        ) : (
-          <>
-            <span style={S.secLbl}>Cliente activo</span>
-            <div style={{border:`2px solid ${CLIENTES[clienteKey].color}`,background:CLIENTES[clienteKey].dark,borderRadius:12,padding:"14px 16px",display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:18}}>
-              <div style={{color:CLIENTES[clienteKey].color,fontWeight:900,fontSize:20}}>{CLIENTES[clienteKey].nombre}</div>
-              <button style={S.cambiarBtn} onClick={()=>handleSetCliente(null)}>Cambiar</button>
-            </div>
-          </>
-        )}
-
-        <span style={S.secLbl}>Selecciona tu equipo</span>
-        {eqList.length===0 ? (
-          <div style={{border:"2px dashed #3A3D4A",borderRadius:12,padding:"24px",textAlign:"center",marginBottom:16}}>
-            <p style={{color:"#6A6F82",fontSize:13,fontWeight:600}}>No hay equipos configurados</p>
-            <p style={{color:"#4A4D5A",fontSize:12,marginTop:6}}>El supervisor debe configurarlos en el panel</p>
-          </div>
-        ) : (
-          <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:16}}>
-            {eqList.map(([id,eq])=>{
-              const activo = !!clienteKey;
-              return (
-                <button key={id}
-                  style={{background:activo?"#1C2030":"#161820",border:`2px solid ${activo?"#6A6F82":"#2A2D3A"}`,borderRadius:14,padding:"16px",display:"flex",alignItems:"center",justifyContent:"space-between",cursor:activo?"pointer":"default",fontFamily:"inherit",width:"100%"}}
-                  onClick={()=>activo&&setMode(`equipo:${id}`)} disabled={!activo}>
-                  <div style={{textAlign:"left"}}>
-                    <div style={{fontSize:18,fontWeight:900,color:activo?"#FFFFFF":"#4A4D5A"}}>{eq.nombre}</div>
-                    <div style={{display:"flex",gap:10,marginTop:5,flexWrap:"wrap"}}>
-                      {(eq.integrantes||[]).map((p,i)=>(
-                        <span key={i} style={{fontSize:11,color:activo?"#A0A4B8":"#3A3D4A",fontWeight:600}}>
-                          {p.rol}: <span style={{color:activo?"#E0E4F8":"#4A4D5A"}}>{p.nombre||"—"}</span>
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                  {activo && <span style={{color:"#6A6F82",fontSize:20}}>→</span>}
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        {!clienteKey && <p style={{color:"#FF9955",fontSize:13,textAlign:"center",marginBottom:16,fontWeight:700}}>← Selecciona un cliente primero</p>}
-        <button style={S.supBtn} onClick={()=>setMode("pin")}>🔐 Acceso Supervisor</button>
-        <button style={{...S.supBtn,marginTop:10,background:"#1A1E30",border:"2px solid #69CAFF",color:"#C0E8FF"}} onClick={()=>setMode("pin-rec")}>📦 Acceso Recepcionista</button>
+      <div style={{padding:"20px",display:"flex",flexDirection:"column",gap:14}}>
+        <button style={{background:"#0A2030",border:"2px solid #7B9FFF",borderRadius:16,padding:"24px 20px",cursor:"pointer",fontFamily:"inherit",textAlign:"left"}}
+          onClick={()=>onSelect("conteo")}>
+          <div style={{fontSize:28,marginBottom:8}}>📋</div>
+          <div style={{color:"#7B9FFF",fontWeight:900,fontSize:20,marginBottom:6}}>Conteo de Inventario</div>
+          <div style={{color:"#8A8FA8",fontSize:13,lineHeight:1.6}}>Conteo cruzado de posiciones y SKUs en racks o suelo. Incluye validación de discrepancias.</div>
+        </button>
+        <button style={{background:"#001A2E",border:"2px solid #69CAFF",borderRadius:16,padding:"24px 20px",cursor:"pointer",fontFamily:"inherit",textAlign:"left"}}
+          onClick={()=>onSelect("recepcion")}>
+          <div style={{fontSize:28,marginBottom:8}}>📦</div>
+          <div style={{color:"#69CAFF",fontWeight:900,fontSize:20,marginBottom:6}}>Validación / Recepción</div>
+          <div style={{color:"#8A8FA8",fontSize:13,lineHeight:1.6}}>Recepción de trailers y contenedores. Registro de mercancía recibida, diferencias y daños.</div>
+        </button>
+        <button style={{background:"#1E1A30",border:"2px solid #8A6FCC",borderRadius:16,padding:"18px 20px",cursor:"pointer",fontFamily:"inherit",textAlign:"left"}}
+          onClick={()=>onSelect("supervisor")}>
+          <div style={{color:"#C8AEFF",fontWeight:900,fontSize:16}}>🔐 Panel de Administración</div>
+        </button>
       </div>
     </div>
   );
+}
 
-  if (mode==="pin-rec") return (
-    <PinScreen
-      titulo="PIN RECEPCIONISTA" emoji="📦" accentColor="#69CAFF"
-      pinCorrecto={RECEPCIONISTA_PIN}
-      onSuccess={()=>setMode("recepcionista")}
-      onBack={()=>setMode(null)}/>
+// ── PANTALLA DE SELECCIÓN DE CLIENTE + EMPLEADO ───────────────────────────────
+function ClienteEmpleadoSelector({actividad,onConfirm,onBack}){
+  const accentColor = actividad==="conteo"?"#7B9FFF":"#69CAFF";
+  const [clienteKey,setClienteKey]=React.useState("");
+  const [empleadoNombre,setEmpleadoNombre]=React.useState("");
+  const [empleadosGuardados,setEmpleadosGuardados]=React.useState([]);
+  const [equipos,setEquipos]=React.useState({});
+  const [equipoId,setEquipoId]=React.useState("");
+  const [error,setError]=React.useState("");
+
+  React.useEffect(()=>{
+    fbGet("empleados").then(data=>{
+      if(data) setEmpleadosGuardados(Object.values(data).map(e=>e.nombre||e).filter(Boolean));
+    });
+  },[]);
+
+  React.useEffect(()=>{
+    if(!clienteKey||actividad!=="conteo") return;
+    const off=fbOn(eqPath(clienteKey),data=>{setEquipos(data||{});setEquipoId("");});
+    return off;
+  },[clienteKey,actividad]);
+
+  const eqList=Object.entries(equipos);
+
+  const handleConfirm=async()=>{
+    if(!clienteKey){setError("Selecciona un cliente");return;}
+    if(!empleadoNombre.trim()){setError("Ingresa tu nombre");return;}
+    if(actividad==="conteo"&&!equipoId){setError("Selecciona tu equipo");return;}
+    // Register active employee
+    const sessionId=uid();
+    await fbSet("empleados_activos/"+sessionId,{
+      nombre:empleadoNombre.trim(),
+      actividad:actividad==="conteo"?"Conteo":"Recepción",
+      cliente:CLIENTES[clienteKey]?.nombre||clienteKey,
+      equipo:actividad==="conteo"?(equipos[equipoId]?.nombre||equipoId):"—",
+      hora:ts(),
+      sessionId,
+    });
+    // Save employee name for future use
+    const existing=await fbGet("empleados");
+    const names=existing?Object.values(existing).map(e=>e.nombre||e):[];
+    if(!names.includes(empleadoNombre.trim())){
+      await fbPush("empleados",{nombre:empleadoNombre.trim()});
+    }
+    onConfirm({clienteKey,empleadoNombre:empleadoNombre.trim(),equipoId,sessionId});
+  };
+
+  return(
+    <div style={S.root}>
+      <div style={{...S.nav,borderColor:accentColor}}>
+        <button style={S.navBtn} onClick={onBack}>← Volver</button>
+        <div style={{flex:1,color:accentColor,fontWeight:900,fontSize:15,letterSpacing:1}}>
+          {actividad==="conteo"?"📋 CONTEO":"📦 RECEPCIÓN"}
+        </div>
+      </div>
+      <div style={{padding:"16px",display:"flex",flexDirection:"column",gap:16}}>
+        <div style={S.card}>
+          <label style={S.lbl}>Tu nombre</label>
+          <input style={S.inp} placeholder="Escribe tu nombre"
+            value={empleadoNombre} onChange={e=>{setEmpleadoNombre(e.target.value);setError("");}}/>
+          {empleadosGuardados.length>0&&(
+            <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:10}}>
+              {empleadosGuardados.filter(n=>!empleadoNombre||n.toLowerCase().includes(empleadoNombre.toLowerCase())).slice(0,8).map(n=>(
+                <button key={n} style={{background:empleadoNombre===n?"#2A3A50":"#1C2030",border:"1px solid "+(empleadoNombre===n?accentColor:"#3A3D4A"),color:empleadoNombre===n?accentColor:"#C0C4D8",borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}
+                  onClick={()=>{setEmpleadoNombre(n);setError("");}}>
+                  {n}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div>
+          <label style={S.secLbl}>Cliente</label>
+          <ClienteSelector onSelect={k=>{setClienteKey(k);setError("");}} selectedKey={clienteKey}/>
+        </div>
+
+        {actividad==="conteo"&&clienteKey&&(
+          <div style={S.card}>
+            <label style={S.lbl}>Equipo</label>
+            {eqList.length===0?(
+              <p style={{color:"#6A6F82",fontSize:13,textAlign:"center",padding:"12px 0"}}>No hay equipos configurados para este cliente.<br/>El supervisor debe crearlos en el panel.</p>
+            ):(
+              <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                {eqList.map(([id,eq])=>(
+                  <button key={id} style={{background:equipoId===id?"#1C2A40":"#0E1016",border:"2px solid "+(equipoId===id?accentColor:"#3A3D4A"),borderRadius:12,padding:"14px",display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer",fontFamily:"inherit"}}
+                    onClick={()=>{setEquipoId(id);setError("");}}>
+                    <div style={{textAlign:"left"}}>
+                      <div style={{color:"#FFFFFF",fontWeight:900,fontSize:16}}>{eq.nombre}</div>
+                      <div style={{color:"#8A8FA8",fontSize:11,marginTop:3}}>
+                        {(eq.integrantes||[]).map(p=>p.rol+": "+(p.nombre||"—")).join(" · ")}
+                      </div>
+                    </div>
+                    {equipoId===id&&<span style={{color:accentColor,fontSize:18}}>✓</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {error&&<p style={{color:"#FF5555",fontWeight:800,fontSize:13,textAlign:"center"}}>{error}</p>}
+
+        <button style={{...S.solidBtn,background:accentColor,color:"#000",fontSize:16}} onClick={handleConfirm}>
+          Continuar →
+        </button>
+      </div>
+    </div>
   );
+}
 
-  if (mode==="pin") return (
-    <PinScreen
-      titulo="PIN SUPERVISOR" emoji="🔐" accentColor="#C8AEFF"
-      pinCorrecto={SUPERVISOR_PIN}
-      onSuccess={()=>setMode("supervisor")}
-      onBack={()=>setMode(null)}/>
+// ── APP PRINCIPAL ─────────────────────────────────────────────────────────────
+function App(){
+  // flow: "activity" | "cliente-empleado" | "conteo" | "recepcion" | "supervisor-pin" | "supervisor"
+  const [flow,setFlow]=React.useState("activity");
+  const [actividad,setActividad]=React.useState(null);
+  const [session,setSession]=React.useState(null); // {clienteKey, empleadoNombre, equipoId, sessionId}
+
+  const handleActivity=act=>{
+    if(act==="supervisor"){setFlow("supervisor-pin");}
+    else{setActividad(act);setFlow("cliente-empleado");}
+  };
+
+  const handleSessionConfirm=async(sess)=>{
+    setSession(sess);
+    setFlow(actividad);
+  };
+
+  const handleExit=async()=>{
+    // Deregister employee on exit
+    if(session?.sessionId) await fbDel("empleados_activos/"+session.sessionId);
+    setSession(null);setActividad(null);setFlow("activity");
+  };
+
+  if(flow==="activity") return <ActivitySelector onSelect={handleActivity}/>;
+  if(flow==="cliente-empleado") return(
+    <ClienteEmpleadoSelector actividad={actividad}
+      onConfirm={handleSessionConfirm} onBack={()=>setFlow("activity")}/>
   );
-
-  if (activeEquipoId) return (
-    <ContadorView equipoId={activeEquipoId} equipo={equipos[activeEquipoId]||{}} clienteKey={clienteKey} onBack={()=>setMode(null)}/>
+  if(flow==="conteo") return(
+    <ContadorView equipoId={session.equipoId} equipo={{}} clienteKey={session.clienteKey}
+      empleadoNombre={session.empleadoNombre} onBack={handleExit}/>
   );
-
-  if (mode==="recepcionista") return (
-    <RecepcionistaView clienteKey={clienteKey} onBack={()=>setMode(null)}/>
+  if(flow==="recepcion") return(
+    <RecepcionistaView clienteKey={session.clienteKey}
+      empleadoNombre={session.empleadoNombre} sessionId={session.sessionId} onBack={handleExit}/>
   );
-
-  if (mode==="supervisor") return (
-    <SupervisorView clienteKey={clienteKey} onBack={()=>setMode(null)} onReset={()=>setConfirmReset(true)}/>
+  if(flow==="supervisor-pin") return(
+    <PinScreen titulo="PIN ADMINISTRADOR" emoji="🔐" accentColor="#C8AEFF"
+      pinCorrecto={SUPERVISOR_PIN} onSuccess={()=>setFlow("supervisor")} onBack={()=>setFlow("activity")}/>
   );
-
+  if(flow==="supervisor") return(
+    <SupervisorView onBack={()=>setFlow("activity")}/>
+  );
   return null;
 }
 
 // ── CONTADOR ──────────────────────────────────────────────────────────────────
-function ContadorView({equipoId, equipo, clienteKey, onBack}) {
-  const cliente = CLIENTES[clienteKey]||Object.values(CLIENTES)[0];
-  const [ubicacion, setUbicacion] = React.useState("");
-  const [skus, setSkus] = React.useState([{id:uid(),sku:"",cantidad:""}]);
-  const [nota, setNota] = React.useState("");
-  const [errors, setErrors] = React.useState({});
-  const [saved, setSaved] = React.useState(false);
-  const [saving, setSaving] = React.useState(false);
-  const [totalReg, setTotalReg] = React.useState(0);
-  const [lastReg, setLastReg] = React.useState(null);
-  const [timerStart, setTimerStart] = React.useState(null);
-  const [timerSecs, setTimerSecs] = React.useState(0);
-  const timerRef = React.useRef(null);
+function ContadorView({equipoId,clienteKey,empleadoNombre,onBack}){
+  const cliente=CLIENTES[clienteKey]||Object.values(CLIENTES)[0];
+  const [equipo,setEquipo]=React.useState({});
+  const [ubicacion,setUbicacion]=React.useState("");
+  const [skus,setSkus]=React.useState([{id:uid(),sku:"",cantidad:""}]);
+  const [nota,setNota]=React.useState("");
+  const [errors,setErrors]=React.useState({});
+  const [saved,setSaved]=React.useState(false);
+  const [saving,setSaving]=React.useState(false);
+  const [totalReg,setTotalReg]=React.useState(0);
+  const [lastReg,setLastReg]=React.useState(null);
+  const [timerStart,setTimerStart]=React.useState(null);
+  const [timerSecs,setTimerSecs]=React.useState(0);
+  const timerRef=React.useRef(null);
 
   React.useEffect(()=>{
-    const off = fbOn(`registros/${equipoId}`, data=>{
-      const regs = data ? Object.values(data) : [];
+    fbGet(eqPath(clienteKey)+"/"+equipoId).then(d=>{ if(d) setEquipo(d); });
+    const off=fbOn("registros/"+equipoId,data=>{
+      const regs=data?Object.values(data):[];
       setTotalReg(regs.length);
       if(regs.length>0) setLastReg(regs.sort((a,b)=>(b.ts||0)-(a.ts||0))[0]);
     });
-    return ()=>{ off(); clearInterval(timerRef.current); };
-  },[equipoId]);
+    return()=>{off();clearInterval(timerRef.current);};
+  },[equipoId,clienteKey]);
 
-  const startTimerIfNeeded = () => {
-    if (!timerStart) {
-      const now = Date.now();
-      setTimerStart(now);
-      timerRef.current = setInterval(()=> setTimerSecs(s=>s+1), 1000);
+  const startTimer=()=>{
+    if(!timerStart){
+      setTimerStart(Date.now());
+      timerRef.current=setInterval(()=>setTimerSecs(s=>s+1),1000);
     }
   };
-  const resetTimer = () => {
-    clearInterval(timerRef.current);
-    setTimerStart(null);
-    setTimerSecs(0);
-  };
-  const addSku = () => setSkus(s=>[...s,{id:uid(),sku:"",cantidad:""}]);
-  const removeSku = (id) => setSkus(s=>s.filter(x=>x.id!==id));
-  const updateSku = (id,field,val) => setSkus(s=>s.map(x=>x.id===id?{...x,[field]:val}:x));
+  const resetTimer=()=>{clearInterval(timerRef.current);setTimerStart(null);setTimerSecs(0);};
+  const addSku=()=>setSkus(s=>[...s,{id:uid(),sku:"",cantidad:""}]);
+  const removeSku=id=>setSkus(s=>s.filter(x=>x.id!==id));
+  const updateSku=(id,f,v)=>setSkus(s=>s.map(x=>x.id===id?{...x,[f]:v}:x));
 
-  const validate = () => {
+  const validate=()=>{
     const e={};
     if(!ubicacion.trim()) e.ubicacion="Requerida";
     skus.forEach((s,i)=>{
-      if(!s.sku.trim()) e[`sku_${i}`]="SKU requerido";
-      if(s.cantidad===""||isNaN(s.cantidad)||Number(s.cantidad)<0) e[`cant_${i}`]="Inválida";
+      if(!s.sku.trim()) e["sku_"+i]="SKU requerido";
+      if(s.cantidad===""||isNaN(s.cantidad)||Number(s.cantidad)<0) e["cant_"+i]="Inválida";
     });
     return e;
   };
 
-  const handleGuardar = async () => {
+  const handleGuardar=async()=>{
     const e=validate(); if(Object.keys(e).length){setErrors(e);return;}
-    const durSecs = timerStart ? Math.round((Date.now() - timerStart) / 1000) : 0;
-    const durMins = parseFloat((durSecs / 60).toFixed(2));
-    const totalPiezas = skus.reduce((s,x)=>s+Number(x.cantidad||0),0);
+    const durSecs=timerStart?Math.round((Date.now()-timerStart)/1000):0;
+    const durMins=parseFloat((durSecs/60).toFixed(2));
+    const totalPiezas=skus.reduce((s,x)=>s+Number(x.cantidad||0),0);
     setSaving(true);
-    await fbPush(`registros/${equipoId}`,{
+    await fbPush("registros/"+equipoId,{
       ubicacion:ubicacion.trim().toUpperCase(),
       skus:skus.map(s=>({sku:s.sku.trim().toUpperCase(),cantidad:Number(s.cantidad)})),
-      nota:nota.trim(), hora:ts(), ts:Date.now(),
-      duracionSecs: durSecs, duracionMins: durMins, totalPiezas,
+      nota:nota.trim(),hora:ts(),ts:Date.now(),
+      duracionSecs:durSecs,duracionMins:durMins,totalPiezas,
+      empleado:empleadoNombre,
     });
-    setSaving(false);
-    resetTimer();
-    setUbicacion(""); setSkus([{id:uid(),sku:"",cantidad:""}]); setNota(""); setErrors({});
-    setSaved(true); setTimeout(()=>setSaved(false),2000);
+    setSaving(false); resetTimer();
+    setUbicacion("");setSkus([{id:uid(),sku:"",cantidad:""}]);setNota("");setErrors({});
+    setSaved(true);setTimeout(()=>setSaved(false),2000);
   };
 
-  return (
+  const fmtTimer=()=>{
+    const h=Math.floor(timerSecs/3600);
+    const m=Math.floor((timerSecs%3600)/60);
+    const s=timerSecs%60;
+    return (h>0?String(h).padStart(2,"0")+":":"")+String(m).padStart(2,"0")+":"+String(s).padStart(2,"0");
+  };
+
+  return(
     <div style={S.root}>
       <div style={{...S.nav,borderColor:cliente.color}}>
         <button style={S.navBtn} onClick={onBack}>← Salir</button>
         <div style={{flex:1}}>
-          <div style={{color:cliente.color,fontWeight:900,fontSize:15,letterSpacing:1}}>{equipo.nombre||equipoId}</div>
-          <div style={{color:"#D0D4E8",fontSize:11,fontWeight:600,marginTop:2}}>
-            {(equipo.integrantes||[]).map(p=>`${p.rol}: ${p.nombre||"—"}`).join(" · ")}
-          </div>
+          <div style={{color:cliente.color,fontWeight:900,fontSize:14,letterSpacing:1}}>{equipo.nombre||"Equipo"} · {cliente.nombre}</div>
+          <div style={{color:"#A0A4B8",fontSize:11,marginTop:1}}>👤 {empleadoNombre}</div>
         </div>
-        <div style={{textAlign:"right",display:"flex",gap:16,alignItems:"center"}}>
-          {timerStart && (
+        <div style={{display:"flex",gap:14,alignItems:"center"}}>
+          {timerStart&&(
             <div style={{textAlign:"center"}}>
-              <div style={{color:"#FFD166",fontWeight:900,fontSize:18,fontFamily:"monospace"}}>
-                {timerSecs>=3600?String(Math.floor(timerSecs/3600)).padStart(2,"0")+":":""}
-                {String(Math.floor((timerSecs%3600)/60)).padStart(2,"0")}:{String(timerSecs%60).padStart(2,"0")}
-              </div>
-              <div style={{color:"#FFD16688",fontSize:10,fontWeight:700}}>en curso</div>
+              <div style={{color:"#FFD166",fontWeight:900,fontSize:16,fontFamily:"monospace"}}>{fmtTimer()}</div>
+              <div style={{color:"#FFD16688",fontSize:9,fontWeight:700}}>en curso</div>
             </div>
           )}
           <div style={{textAlign:"center"}}>
-            <div style={{color:"#FFFFFF",fontWeight:900,fontSize:20}}>{totalReg}</div>
-            <div style={{color:"#C0C4D8",fontSize:11,fontWeight:600}}>posiciones</div>
+            <div style={{color:"#FFFFFF",fontWeight:900,fontSize:18}}>{totalReg}</div>
+            <div style={{color:"#C0C4D8",fontSize:10,fontWeight:600}}>pos.</div>
           </div>
         </div>
       </div>
@@ -450,220 +489,469 @@ function ContadorView({equipoId, equipo, clienteKey, onBack}) {
             placeholder={cliente.ubicacionPlaceholder} value={ubicacion}
             onChange={e=>{setUbicacion(e.target.value);setErrors(er=>({...er,ubicacion:null}));}}/>
           <span style={S.hint}>{cliente.ubicacionHint}</span>
-          {errors.ubicacion && <span style={S.errMsg}>{errors.ubicacion}</span>}
+          {errors.ubicacion&&<span style={S.errMsg}>{errors.ubicacion}</span>}
 
-          <div style={{marginTop:20,marginBottom:10,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <div style={{marginTop:18,marginBottom:10,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
             <label style={{...S.lbl,margin:0}}>SKUs en esta posición</label>
-            <button style={{background:cliente.color,border:"none",color:"#000",borderRadius:8,padding:"9px 16px",fontSize:14,fontWeight:900,cursor:"pointer",fontFamily:"inherit"}}
+            <button style={{background:cliente.color,border:"none",color:"#000",borderRadius:8,padding:"8px 14px",fontSize:13,fontWeight:900,cursor:"pointer",fontFamily:"inherit"}}
               onClick={addSku}>+ Agregar SKU</button>
           </div>
 
           {skus.map((s,i)=>(
-            <div key={s.id} style={{display:"flex",gap:8,marginBottom:12,alignItems:"flex-start"}}>
+            <div key={s.id} style={{display:"flex",gap:8,marginBottom:10,alignItems:"flex-start"}}>
               <div style={{flex:2}}>
-                <div style={{color:"#D0D4E8",fontSize:12,fontWeight:700,marginBottom:5}}>SKU {i+1}</div>
-                <input style={{...S.inp,...(errors[`sku_${i}`]?S.inpErr:{})}}
+                <div style={{color:"#D0D4E8",fontSize:11,fontWeight:700,marginBottom:4}}>SKU {i+1}</div>
+                <input style={{...S.inp,...(errors["sku_"+i]?S.inpErr:{})}}
                   placeholder={cliente.skuPlaceholder} value={s.sku}
-                  onChange={e=>{updateSku(s.id,"sku",e.target.value);setErrors(er=>({...er,[`sku_${i}`]:null}));startTimerIfNeeded();}}/>
-                {errors[`sku_${i}`] && <span style={S.errMsg}>{errors[`sku_${i}`]}</span>}
+                  onChange={e=>{updateSku(s.id,"sku",e.target.value);setErrors(er=>({...er,["sku_"+i]:null}));startTimer();}}/>
+                {errors["sku_"+i]&&<span style={S.errMsg}>{errors["sku_"+i]}</span>}
               </div>
               <div style={{flex:1}}>
-                <div style={{color:"#D0D4E8",fontSize:12,fontWeight:700,marginBottom:5}}>Cant.</div>
-                <input style={{...S.inp,textAlign:"center",fontSize:24,fontWeight:900,...(errors[`cant_${i}`]?S.inpErr:{})}}
+                <div style={{color:"#D0D4E8",fontSize:11,fontWeight:700,marginBottom:4}}>Cant.</div>
+                <input style={{...S.inp,textAlign:"center",fontSize:22,fontWeight:900,...(errors["cant_"+i]?S.inpErr:{})}}
                   placeholder="0" type="number" inputMode="numeric" min="0" value={s.cantidad}
-                  onChange={e=>{updateSku(s.id,"cantidad",e.target.value);setErrors(er=>({...er,[`cant_${i}`]:null}));}}
+                  onChange={e=>{updateSku(s.id,"cantidad",e.target.value);setErrors(er=>({...er,["cant_"+i]:null}));}}
                   onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();addSku();}}}/>
-                {errors[`cant_${i}`] && <span style={S.errMsg}>{errors[`cant_${i}`]}</span>}
+                {errors["cant_"+i]&&<span style={S.errMsg}>{errors["cant_"+i]}</span>}
               </div>
-              {skus.length>1 && (
-                <button style={{background:"#2A1515",border:"2px solid #FF5555",color:"#FF5555",borderRadius:8,padding:"9px 11px",fontSize:15,cursor:"pointer",fontFamily:"inherit",alignSelf:"flex-end",marginBottom:2}}
+              {skus.length>1&&(
+                <button style={{background:"#2A1515",border:"2px solid #FF5555",color:"#FF5555",borderRadius:8,padding:"8px 10px",fontSize:14,cursor:"pointer",fontFamily:"inherit",alignSelf:"flex-end",marginBottom:1}}
                   onClick={()=>removeSku(s.id)}>✕</button>
               )}
             </div>
           ))}
 
-          <label style={{...S.lbl,marginTop:10}}>Nota (daño, observación)</label>
+          <label style={{...S.lbl,marginTop:8}}>Nota (daño, observación)</label>
           <input style={S.inp} placeholder="Opcional" value={nota} onChange={e=>setNota(e.target.value)}/>
 
-          <button style={{...S.solidBtn,background:saved?"#00E6A8":cliente.color,color:"#000",marginTop:20,fontSize:16,opacity:saving?0.7:1}}
+          <button style={{...S.solidBtn,background:saved?"#00E6A8":cliente.color,color:"#000",marginTop:18,fontSize:15,opacity:saving?0.7:1}}
             onClick={handleGuardar} disabled={saving}>
             {saving?"Guardando...":saved?"✓ Posición guardada":"Registrar posición"}
           </button>
         </div>
 
-        {lastReg && (
-          <div style={{background:"#1C2030",border:`2px solid ${cliente.color}66`,borderRadius:12,padding:"13px 15px",marginTop:12}}>
-            <div style={{color:"#C0C4D8",fontSize:11,fontWeight:700,letterSpacing:2,marginBottom:7}}>ÚLTIMO — {lastReg.hora}</div>
-            <div style={{color:cliente.color,fontWeight:900,fontSize:16}}>{lastReg.ubicacion}</div>
+        {lastReg&&(
+          <div style={{background:"#1C2030",border:"2px solid "+cliente.color+"66",borderRadius:12,padding:"12px 14px",marginTop:12}}>
+            <div style={{color:"#C0C4D8",fontSize:10,fontWeight:700,letterSpacing:2,marginBottom:6}}>ÚLTIMO — {lastReg.hora}</div>
+            <div style={{color:cliente.color,fontWeight:900,fontSize:15}}>{lastReg.ubicacion}</div>
             {(lastReg.skus||[]).map((s,i)=>(
-              <div key={i} style={{display:"flex",justifyContent:"space-between",marginTop:6}}>
+              <div key={i} style={{display:"flex",justifyContent:"space-between",marginTop:5}}>
                 <span style={{color:"#E0E4F8",fontSize:13,fontWeight:600}}>{s.sku}</span>
-                <span style={{color:"#FFFFFF",fontWeight:900,fontSize:15}}>{s.cantidad} uds</span>
+                <span style={{color:"#FFFFFF",fontWeight:900,fontSize:14}}>{s.cantidad} uds</span>
               </div>
             ))}
           </div>
         )}
-        <p style={{color:"#8A8FA8",fontSize:12,textAlign:"center",marginTop:14,fontWeight:600}}>Registros visibles para el supervisor en tiempo real</p>
+        <p style={{color:"#6A6F82",fontSize:11,textAlign:"center",marginTop:12,fontWeight:600}}>Registros visibles para el administrador en tiempo real</p>
       </div>
     </div>
   );
 }
 
-// ── SUPERVISOR ────────────────────────────────────────────────────────────────
-function SupervisorView({clienteKey, onBack, onReset}) {
-  const cliente = clienteKey ? CLIENTES[clienteKey] : null;
-  const accentColor = cliente?.color||"#C8AEFF";
-  const [fbData, setFbData] = React.useState({});
-  const [equipos, setEquipos] = React.useState({});
-  const [terceros, setTerceros] = React.useState({});
-  const [filter, setFilter] = React.useState("all");
-  const [saving, setSaving] = React.useState({});
-  const [showCopyModal, setShowCopyModal] = React.useState(false);
-  const [copied, setCopied] = React.useState(false);
-  const [lastUpdate, setLastUpdate] = React.useState(null);
-  const [refreshing, setRefreshing] = React.useState(false);
-  const [editModal, setEditModal] = React.useState(null);
-  const [editForm, setEditForm] = React.useState({});
-  const [confirmDel, setConfirmDel] = React.useState(null);
-  const [confirmDelTeam, setConfirmDelTeam] = React.useState(null);
-  const [vistaPanel, setVistaPanel] = React.useState("conteo");
-  const [historial, setHistorial] = React.useState([]);
-  const [histLoading, setHistLoading] = React.useState(false);
-  const [newTeamName, setNewTeamName] = React.useState("");
+// ── RECEPCIONISTA ─────────────────────────────────────────────────────────────
+function RecepcionistaView({clienteKey,empleadoNombre,sessionId,onBack}){
+  const accentColor="#69CAFF";
+  const [contenedores,setContenedores]=React.useState({});
+  const [vista,setVista]=React.useState("lista"); // lista | nuevo | detalle
+  const [selectedId,setSelectedId]=React.useState(null);
+  const [confirmDel,setConfirmDel]=React.useState(null);
+  const [numCont,setNumCont]=React.useState("");
+  const [transportista,setTransportista]=React.useState("");
+  const [clienteContKey,setClienteContKey]=React.useState(clienteKey||"");
+  const [skus,setSkus]=React.useState([{id:uid(),sku:"",esperado:"",recibido:"",danado:"",notaDano:""}]);
+  const [obs,setObs]=React.useState("");
+  const [saving,setSaving]=React.useState(false);
+  const [saved,setSaved]=React.useState(false);
+  const [showCopy,setShowCopy]=React.useState(false);
+  const [copied,setCopied]=React.useState(false);
 
-  const fetchAll = React.useCallback(async()=>{
-    const [data, eqs] = await Promise.all([
+  React.useEffect(()=>{
+    const off=fbOn("contenedores",data=>setContenedores(data||{}));
+    return off;
+  },[]);
+
+  const addSku=()=>setSkus(s=>[...s,{id:uid(),sku:"",esperado:"",recibido:"",danado:"",notaDano:""}]);
+  const removeSku=id=>setSkus(s=>s.filter(x=>x.id!==id));
+  const updateSku=(id,f,v)=>setSkus(s=>s.map(x=>x.id===id?{...x,[f]:v}:x));
+  const resetForm=()=>{setNumCont("");setTransportista("");setObs("");setSkus([{id:uid(),sku:"",esperado:"",recibido:"",danado:"",notaDano:""}]);setSaved(false);};
+
+  const handleGuardar=async()=>{
+    if(!numCont.trim()||!clienteContKey) return;
+    setSaving(true);
+    await fbPush("contenedores",{
+      cliente:clienteContKey,clienteNombre:CLIENTES[clienteContKey]?.nombre||clienteContKey,
+      numContenedor:numCont.trim().toUpperCase(),transportista:transportista.trim(),
+      fecha:dateStr(),hora:ts(),ts:Date.now(),empleado:empleadoNombre,
+      skus:skus.filter(s=>s.sku.trim()).map(s=>({
+        sku:s.sku.trim().toUpperCase(),esperado:Number(s.esperado)||0,
+        recibido:Number(s.recibido)||0,danado:Number(s.danado)||0,
+        notaDano:s.notaDano.trim(),diferencia:(Number(s.recibido)||0)-(Number(s.esperado)||0),
+      })),
+      obsGeneral:obs.trim(),
+    });
+    setSaving(false);setSaved(true);
+    setTimeout(()=>{resetForm();setVista("lista");},1500);
+  };
+
+  const deleteCont=async()=>{
+    await fbDel("contenedores/"+confirmDel);
+    setConfirmDel(null);
+    if(selectedId===confirmDel){setSelectedId(null);setVista("lista");}
+  };
+
+  const buildCSV=(cont)=>{
+    if(!cont) return "";
+    const header="SKU,Esperado,Recibido,Danado,Diferencia,Nota_Dano";
+    const rows=(cont.skus||[]).map(s=>s.sku+","+s.esperado+","+s.recibido+","+(s.danado||0)+","+s.diferencia+',"'+(s.notaDano||"").replace(/"/g,'""')+'"');
+    const lines=["Contenedor: "+cont.numContenedor,"Cliente: "+cont.clienteNombre,
+      "Fecha: "+cont.fecha+" "+cont.hora,"Transportista: "+(cont.transportista||"—"),
+      "Recepcionista: "+(cont.empleado||"—"),"Observaciones: "+(cont.obsGeneral||"—"),
+      "",header].concat(rows);
+    return lines.join("\n");
+  };
+
+  const exportCSV=(cont)=>{
+    const text=buildCSV(cont); if(!text) return;
+    try{const blob=new Blob([text],{type:"text/csv"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="contenedor_"+cont.numContenedor+"_"+cont.fecha.replace(/\//g,"-")+".csv";a.click();}catch(e){console.error(e);}
+  };
+  const handleCopy=(cont)=>{
+    const text=buildCSV(cont); if(!text) return;
+    if(navigator.clipboard) navigator.clipboard.writeText(text).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);});
+    else{const ta=document.createElement("textarea");ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand("copy");document.body.removeChild(ta);setCopied(true);setTimeout(()=>setCopied(false),2000);}
+  };
+
+  const contList=Object.entries(contenedores).sort((a,b)=>(b[1].ts||0)-(a[1].ts||0));
+  const sel=selectedId?contenedores[selectedId]:null;
+  const hasDanos=c=>(c.skus||[]).some(s=>s.danado>0||s.notaDano);
+  const hasDifs=c=>(c.skus||[]).some(s=>s.diferencia!==0);
+
+  return(
+    <div style={S.root}>
+      {confirmDel&&<ConfirmModal title="¿Eliminar registro?" message="Se eliminará el registro de este contenedor. Esta acción no se puede deshacer." confirmLabel="Sí, eliminar" onConfirm={deleteCont} onCancel={()=>setConfirmDel(null)}/>}
+      {showCopy&&sel&&(
+        <div style={{position:"fixed",inset:0,background:"#000000EE",zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
+          <div style={{background:"#1C2030",border:"2px solid #4A4D5A",borderRadius:18,padding:"22px 18px",width:"100%",maxWidth:480}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+              <p style={{color:"#FFFFFF",fontSize:14,fontWeight:800}}>Reporte CSV</p>
+              <button style={{...S.navBtn,fontSize:11}} onClick={()=>setShowCopy(false)}>✕ Cerrar</button>
+            </div>
+            <textarea readOnly style={{...S.inp,height:180,resize:"none",fontSize:11,lineHeight:1.6,fontFamily:"monospace"}} value={buildCSV(sel)} onFocus={e=>e.target.select()}/>
+            <button style={{...S.solidBtn,background:copied?"#00E6A8":accentColor,color:"#000",marginTop:10,fontSize:14}} onClick={()=>handleCopy(sel)}>
+              {copied?"✓ Copiado":"📋 Copiar reporte"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div style={{...S.nav,borderColor:accentColor}}>
+        <button style={S.navBtn} onClick={vista==="lista"?onBack:()=>{setVista("lista");setSelectedId(null);}}>← {vista==="lista"?"Salir":"Volver"}</button>
+        <div style={{flex:1}}>
+          <div style={{color:accentColor,fontWeight:900,fontSize:14,letterSpacing:1}}>RECEPCIÓN</div>
+          <div style={{color:"#A0A4B8",fontSize:11}}>👤 {empleadoNombre}</div>
+        </div>
+        {vista==="lista"&&<button style={{...S.navBtn,background:accentColor,color:"#000",border:"none",fontWeight:900}} onClick={()=>{resetForm();setVista("nuevo");}}>+ Nuevo</button>}
+      </div>
+
+      {/* LISTA */}
+      {vista==="lista"&&(
+        <div style={{padding:"14px",display:"flex",flexDirection:"column",gap:10}}>
+          <span style={S.secLbl}>Contenedores registrados ({contList.length})</span>
+          {contList.length===0&&(
+            <div style={{border:"2px dashed #3A3D4A",borderRadius:12,padding:"28px",textAlign:"center"}}>
+              <p style={{color:"#6A6F82",fontSize:13}}>Sin contenedores registrados aún</p>
+            </div>
+          )}
+          {contList.map(([id,cont])=>{
+            const c=CLIENTES[cont.cliente];
+            return(
+              <div key={id} style={{background:"#1C2030",border:"2px solid "+(hasDanos(cont)?"#FF5555":hasDifs(cont)?"#FFD166":"#3A3D4A"),borderRadius:14,padding:"13px",cursor:"pointer"}}
+                onClick={()=>{setSelectedId(id);setVista("detalle");}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                  <div>
+                    <div style={{color:"#FFFFFF",fontWeight:900,fontSize:15}}>📦 {cont.numContenedor}</div>
+                    <div style={{color:c?c.color:"#C8AEFF",fontSize:12,fontWeight:700,marginTop:2}}>{cont.clienteNombre}</div>
+                    <div style={{color:"#6A6F82",fontSize:11,marginTop:2}}>{cont.fecha} · {cont.hora}</div>
+                  </div>
+                  <div style={{display:"flex",flexDirection:"column",gap:4,alignItems:"flex-end"}}>
+                    {hasDanos(cont)&&<span style={{fontSize:10,fontWeight:800,color:"#FF5555",background:"#FF555520",border:"1px solid #FF5555",borderRadius:6,padding:"2px 7px"}}>⚠ Daños</span>}
+                    {hasDifs(cont)&&!hasDanos(cont)&&<span style={{fontSize:10,fontWeight:800,color:"#FFD166",background:"#FFD16620",border:"1px solid #FFD166",borderRadius:6,padding:"2px 7px"}}>≠ Difs.</span>}
+                    {!hasDanos(cont)&&!hasDifs(cont)&&<span style={{fontSize:10,fontWeight:800,color:"#00E6A8",background:"#00E6A820",border:"1px solid #00E6A8",borderRadius:6,padding:"2px 7px"}}>✓ OK</span>}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* DETALLE */}
+      {vista==="detalle"&&sel&&(
+        <div style={{padding:"14px",display:"flex",flexDirection:"column",gap:12}}>
+          <div style={S.card}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
+              <div>
+                <div style={{color:accentColor,fontWeight:900,fontSize:18}}>📦 {sel.numContenedor}</div>
+                <div style={{color:CLIENTES[sel.cliente]?.color||"#C8AEFF",fontSize:13,fontWeight:700,marginTop:2}}>{sel.clienteNombre}</div>
+                <div style={{color:"#8A8FA8",fontSize:11,marginTop:2}}>{sel.fecha} · {sel.hora}</div>
+                {sel.transportista&&<div style={{color:"#C0C4D8",fontSize:11,marginTop:2}}>🚛 {sel.transportista}</div>}
+                {sel.empleado&&<div style={{color:"#C0C4D8",fontSize:11,marginTop:2}}>👤 {sel.empleado}</div>}
+              </div>
+              <button style={{background:"#2A1515",border:"2px solid #FF5555",color:"#FF5555",borderRadius:8,padding:"7px 11px",fontSize:11,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}
+                onClick={()=>setConfirmDel(selectedId)}>🗑 Eliminar</button>
+            </div>
+            {sel.obsGeneral&&<div style={{background:"#0E1016",border:"1px solid #3A3D4A",borderRadius:8,padding:"9px 12px"}}><span style={{color:"#A0A4B8",fontSize:11,fontWeight:700}}>OBS: </span><span style={{color:"#E0E4F8",fontSize:12}}>{sel.obsGeneral}</span></div>}
+          </div>
+          {(sel.skus||[]).map((s,i)=>{
+            const st=s.danado>0?"dano":s.diferencia>0?"exceso":s.diferencia<0?"faltante":"ok";
+            const cfg={ok:{color:"#00E6A8",label:"✓ OK"},dano:{color:"#FF5555",label:"⚠ Daño"},exceso:{color:"#FFD166",label:"↑ Exceso"},faltante:{color:"#FF9955",label:"↓ Faltante"}}[st];
+            return(
+              <div key={i} style={{background:"#1C2030",border:"2px solid "+cfg.color+"55",borderRadius:12,padding:"13px"}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:9}}>
+                  <span style={{color:"#FFFFFF",fontWeight:900,fontSize:14}}>{s.sku}</span>
+                  <span style={{fontSize:10,fontWeight:800,color:cfg.color,border:"1px solid "+cfg.color,borderRadius:6,padding:"2px 7px"}}>{cfg.label}</span>
+                </div>
+                <div style={{display:"flex",gap:6}}>
+                  {[["Esperado",s.esperado,"#C0C4D8"],["Recibido",s.recibido,"#FFFFFF"],["Dañado",s.danado,"#FF5555"],["Diferencia",(s.diferencia>0?"+":"")+s.diferencia,s.diferencia===0?"#00E6A8":s.diferencia>0?"#FFD166":"#FF9955"]].map(([l,v,c])=>(
+                    <div key={l} style={{flex:1,background:"#0E1016",border:"1px solid #2A2D3A",borderRadius:8,padding:"7px",textAlign:"center"}}>
+                      <div style={{fontSize:9,color:"#6A6F82",fontWeight:700,letterSpacing:1,marginBottom:3}}>{l.toUpperCase()}</div>
+                      <div style={{fontSize:18,fontWeight:900,color:c}}>{v}</div>
+                    </div>
+                  ))}
+                </div>
+                {s.notaDano&&<div style={{marginTop:7,background:"#200F0F",border:"1px solid #FF555544",borderRadius:7,padding:"7px 9px",color:"#FF9955",fontSize:11}}>⚠ {s.notaDano}</div>}
+              </div>
+            );
+          })}
+          <div style={{display:"flex",gap:8}}>
+            <button style={{...S.solidBtn,background:accentColor,color:"#000",fontSize:13}} onClick={()=>exportCSV(sel)}>↓ Descargar CSV</button>
+            <button style={{...S.solidBtn,background:"#2A2D3A",border:"2px solid #6A6F82",color:"#FFFFFF",fontSize:13}} onClick={()=>setShowCopy(true)}>📋 Copiar</button>
+          </div>
+        </div>
+      )}
+
+      {/* NUEVO */}
+      {vista==="nuevo"&&(
+        <div style={{padding:"14px",display:"flex",flexDirection:"column",gap:12}}>
+          <div style={S.card}>
+            <label style={S.lbl}>Cliente</label>
+            <ClienteSelector onSelect={setClienteContKey} selectedKey={clienteContKey}/>
+            <label style={{...S.lbl,marginTop:14}}>N° de Contenedor / Sello</label>
+            <input style={S.inp} placeholder="Ej: CONT-2024-001" value={numCont} onChange={e=>setNumCont(e.target.value)}/>
+            <label style={{...S.lbl,marginTop:12}}>Transportista (opcional)</label>
+            <input style={S.inp} placeholder="Empresa o conductor" value={transportista} onChange={e=>setTransportista(e.target.value)}/>
+          </div>
+          <div style={S.card}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+              <label style={{...S.lbl,margin:0}}>Mercancía recibida</label>
+              <button style={{background:accentColor,border:"none",color:"#000",borderRadius:8,padding:"8px 14px",fontSize:12,fontWeight:900,cursor:"pointer",fontFamily:"inherit"}} onClick={addSku}>+ SKU</button>
+            </div>
+            {skus.map((s,i)=>(
+              <div key={s.id} style={{background:"#0E1016",border:"2px solid #2A2D3A",borderRadius:11,padding:"11px",marginBottom:9}}>
+                <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:9}}>
+                  <input style={{...S.inp,flex:1,fontSize:13}} placeholder="SKU o código de barras" value={s.sku} onChange={e=>updateSku(s.id,"sku",e.target.value)}/>
+                  {skus.length>1&&<button style={{background:"#2A1515",border:"2px solid #FF5555",color:"#FF5555",borderRadius:8,padding:"7px 9px",fontSize:12,cursor:"pointer",fontFamily:"inherit"}} onClick={()=>removeSku(s.id)}>✕</button>}
+                </div>
+                <div style={{display:"flex",gap:7,marginBottom:7}}>
+                  {[["esperado","Esperado"],["recibido","Recibido"],["danado","Dañado"]].map(([f,l])=>(
+                    <div key={f} style={{flex:1}}>
+                      <div style={{color:"#A0A4B8",fontSize:9,fontWeight:700,letterSpacing:1,marginBottom:4}}>{l.toUpperCase()}</div>
+                      <input style={{...S.inp,textAlign:"center",fontSize:18,fontWeight:900}} type="number" inputMode="numeric" min="0" placeholder="0" value={s[f]} onChange={e=>updateSku(s.id,f,e.target.value)}/>
+                    </div>
+                  ))}
+                </div>
+                {Number(s.danado)>0&&(
+                  <input style={{...S.inp,fontSize:12}} placeholder="Describe el daño..." value={s.notaDano} onChange={e=>updateSku(s.id,"notaDano",e.target.value)}/>
+                )}
+              </div>
+            ))}
+          </div>
+          <div style={S.card}>
+            <label style={S.lbl}>Observaciones generales</label>
+            <input style={S.inp} placeholder="Condición del sello, temperatura, incidencias..." value={obs} onChange={e=>setObs(e.target.value)}/>
+          </div>
+          <button style={{...S.solidBtn,background:saved?"#00E6A8":accentColor,color:"#000",fontSize:15,opacity:saving?0.7:1}}
+            onClick={handleGuardar} disabled={saving||!numCont.trim()||!clienteContKey}>
+            {saving?"Guardando...":saved?"✓ Contenedor registrado":"Registrar contenedor"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── SUPERVISOR ────────────────────────────────────────────────────────────────
+function SupervisorView({onBack}){
+  const [fbData,setFbData]=React.useState({});
+  const [equiposPorCliente,setEquiposPorCliente]=React.useState({});
+  const [empleadosActivos,setEmpleadosActivos]=React.useState({});
+  const [clienteKey,setClienteKey]=React.useState("");
+  const [terceros,setTerceros]=React.useState({});
+  const [filter,setFilter]=React.useState("all");
+  const [saving,setSaving]=React.useState({});
+  const [showCopy,setShowCopy]=React.useState(false);
+  const [copied,setCopied]=React.useState(false);
+  const [lastUpdate,setLastUpdate]=React.useState(null);
+  const [refreshing,setRefreshing]=React.useState(false);
+  const [editModal,setEditModal]=React.useState(null);
+  const [editForm,setEditForm]=React.useState({});
+  const [confirmDel,setConfirmDel]=React.useState(null);
+  const [confirmDelTeam,setConfirmDelTeam]=React.useState(null);
+  const [confirmReset,setConfirmReset]=React.useState(false);
+  const [vistaPanel,setVistaPanel]=React.useState("empleados"); // empleados | conteo | equipos | historial
+  const [historial,setHistorial]=React.useState([]);
+  const [histLoading,setHistLoading]=React.useState(false);
+  const [newTeamName,setNewTeamName]=React.useState("");
+  const [listaEmpleados,setListaEmpleados]=React.useState([]);
+  const [confirmDelEmp,setConfirmDelEmp]=React.useState(null);
+
+  const fetchAll=React.useCallback(async()=>{
+    const [data,eqs,activos,lista]=await Promise.all([
       fbGet("/"),
-      clienteKey ? fbGet(eqPath(clienteKey)) : Promise.resolve({}),
+      clienteKey?fbGet(eqPath(clienteKey)):Promise.resolve({}),
+      fbGet("empleados_activos"),
+      fbGet("empleados"),
     ]);
     setFbData(data||{});
-    setEquipos(eqs||{});
+    setEquiposPorCliente(prev=>({...prev,[clienteKey]:eqs||{}}));
+    setEmpleadosActivos(activos||{});
+    setListaEmpleados(lista?Object.entries(lista):[]);
     setLastUpdate(new Date().toLocaleTimeString("es-MX",{hour:"2-digit",minute:"2-digit",second:"2-digit"}));
   },[clienteKey]);
 
   React.useEffect(()=>{
-    // Listen to registros/validaciones at root
-    const offRoot = fbOn("/", data=>{
+    const offRoot=fbOn("/",data=>{
       setFbData(data||{});
       setLastUpdate(new Date().toLocaleTimeString("es-MX",{hour:"2-digit",minute:"2-digit",second:"2-digit"}));
     });
-    // Listen to equipos under client path
-    const offEq = clienteKey
-      ? fbOn(eqPath(clienteKey), data=>setEquipos(data||{}))
-      : ()=>{};
-    const poll = setInterval(fetchAll,5000);
-    return ()=>{offRoot();offEq();clearInterval(poll);};
-  },[fetchAll, clienteKey]);
+    const offActivos=fbOn("empleados_activos",data=>setEmpleadosActivos(data||{}));
+    const offLista=fbOn("empleados",data=>setListaEmpleados(data?Object.entries(data):[]));
+    const poll=setInterval(fetchAll,5000);
+    return()=>{offRoot();offActivos();offLista();clearInterval(poll);};
+  },[fetchAll]);
 
-  const fetchHistorial = React.useCallback(async()=>{
+  React.useEffect(()=>{
+    if(!clienteKey) return;
+    const off=fbOn(eqPath(clienteKey),data=>{
+      setEquiposPorCliente(prev=>({...prev,[clienteKey]:data||{}}));
+    });
+    return off;
+  },[clienteKey]);
+
+  const equipos=equiposPorCliente[clienteKey]||{};
+  const eqIds=Object.keys(equipos);
+  const cross=buildCrossMap(equipos,fbData.registros,fbData.validaciones);
+  const counts=cross.reduce((acc,r)=>{const s=getStatus(r,eqIds);acc[s]=(acc[s]||0)+1;return acc;},{});
+  const filtered=filter==="all"?cross:cross.filter(r=>getStatus(r,eqIds)===filter);
+  const activosList=Object.values(empleadosActivos);
+
+  // Team management
+  const ep=path=>eqPath(clienteKey)+"/"+path;
+  const addTeam=async()=>{
+    if(!newTeamName.trim()||!clienteKey) return;
+    const id=uid();
+    await fbSet(ep(id),{nombre:newTeamName.trim(),integrantes:ROLES_NORMAL.map(r=>({rol:r,nombre:""})),tipo:"normal"});
+    setNewTeamName("");
+  };
+  const deleteTeam=async id=>{await fbDel(ep(id));await fbDel("registros/"+id);setConfirmDelTeam(null);};
+  const updInt=async(tid,idx,f,v)=>{
+    const eq=equipos[tid];if(!eq)return;
+    const ints=[...(eq.integrantes||[])];ints[idx]={...ints[idx],[f]:v};
+    await fbSet(ep(tid+"/integrantes"),ints);
+  };
+  const addInt=async(tid,rol)=>{
+    const eq=equipos[tid];if(!eq)return;
+    await fbSet(ep(tid+"/integrantes"),(eq.integrantes||[]).concat([{rol,nombre:""}]));
+  };
+  const remInt=async(tid,idx)=>{
+    const eq=equipos[tid];if(!eq)return;
+    await fbSet(ep(tid+"/integrantes"),(eq.integrantes||[]).filter((_,i)=>i!==idx));
+  };
+  const setTipoConteo=async(tid,tipo)=>{
+    const roles=tipo==="auditoria"?ROLES_AUDITORIA:ROLES_NORMAL;
+    await fbSet(ep(tid+"/integrantes"),roles.map(r=>({rol:r,nombre:""})));
+    await fbSet(ep(tid+"/tipo"),tipo);
+  };
+
+  // Edit/delete registros
+  const openEdit=(row,eqId)=>{
+    const d=row.equipos[eqId];if(!d)return;
+    setEditForm({eqId,fbId:d.fbId,ubicacion:row.ubicacion,sku:row.sku,cantidad:d.cantidad});
+    setEditModal({row,eqId});
+  };
+  const saveEdit=async()=>{
+    const{eqId,fbId,ubicacion,sku,cantidad}=editForm;
+    const rec=await fbGet("registros/"+eqId+"/"+fbId);if(!rec)return;
+    const newSkus=(rec.skus||[]).map(s=>s.sku.toUpperCase()===editModal.row.sku?{...s,sku:sku.toUpperCase(),cantidad:Number(cantidad)}:s);
+    await fbSet("registros/"+eqId+"/"+fbId,{...rec,ubicacion:ubicacion.toUpperCase(),skus:newSkus});
+    await fbDel("validaciones/"+makeKey(editModal.row.ubicacion,editModal.row.sku));
+    setEditModal(null);await fetchAll();
+  };
+  const deleteRecord=async()=>{
+    await fbDel("registros/"+confirmDel.eqId+"/"+confirmDel.fbId);
+    await fbDel("validaciones/"+makeKey(confirmDel.ubicacion,confirmDel.sku));
+    setConfirmDel(null);await fetchAll();
+  };
+
+  // Reset
+  const handleReset=async()=>{
+    const[snap,eqs]=await Promise.all([fbGet("/"),clienteKey?fbGet(eqPath(clienteKey)):Promise.resolve({})]);
+    if(snap){
+      const safeEqs=eqs||{};
+      const cr=buildCrossMap(safeEqs,snap.registros||{},snap.validaciones||{});
+      const ids=Object.keys(safeEqs);
+      await fbSet("historial/sesion_"+Date.now(),{
+        cliente:snap.sesion?.cliente||clienteKey||"DESCONOCIDO",
+        fecha:dateStr(),hora:ts(),
+        totalRegistros:cr.length,
+        discrepancias:cr.filter(r=>getStatus(r,ids)==="discrepancia").length,
+        validados:cr.filter(r=>getStatus(r,ids)==="validado").length,
+        equipos:safeEqs,registros:snap.registros||{},validaciones:snap.validaciones||{},
+      });
+    }
+    await fbDel("registros");await fbDel("validaciones");
+    setConfirmReset(false);await fetchAll();
+  };
+
+  // CSV conteo
+  const buildCSV=()=>{
+    if(!cross.length) return "";
+    const eqNames=eqIds.map(id=>equipos[id]?.nombre||id);
+    const esc=v=>'"'+(v||"").toString().replace(/"/g,'""')+'"';
+    const header=["Ubicacion","SKU",...eqNames.map(n=>"Cant_"+n),"Validado","Estatus",...eqNames.map(n=>"Mins_"+n),...eqNames.map(n=>"Piezas_"+n),...eqNames.map(n=>"Nota_"+n)].join(",");
+    const body=cross.map(r=>{
+      const vals=eqIds.map(id=>r.equipos[id]?.cantidad??"");
+      const mins=eqIds.map(id=>r.equipos[id]?.duracionMins??"");
+      const pzas=eqIds.map(id=>r.equipos[id]?.totalPiezas??"");
+      const notas=eqIds.map(id=>esc(r.equipos[id]?.nota||""));
+      return[r.ubicacion,r.sku,...vals,r.validado??"",getStatus(r,eqIds),...mins,...pzas,...notas].join(",");
+    });
+    return[header,...body].join("\n");
+  };
+  const exportCSV=()=>{
+    const text=buildCSV();if(!text)return;
+    try{const blob=new Blob([text],{type:"text/csv"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="conteo_"+(clienteKey||"general")+"_"+new Date().toISOString().slice(0,10)+".csv";a.click();}catch(e){console.error(e);}
+  };
+  const handleCopy=()=>{
+    const text=buildCSV();if(!text)return;
+    if(navigator.clipboard) navigator.clipboard.writeText(text).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2500);});
+    else{const ta=document.createElement("textarea");ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand("copy");document.body.removeChild(ta);setCopied(true);setTimeout(()=>setCopied(false),2500);}
+  };
+  const handleValidar=async(key,cantidad)=>{
+    setSaving(s=>({...s,[key]:true}));
+    await fbSet("validaciones/"+key,Number(cantidad));
+    setSaving(s=>({...s,[key]:false}));
+  };
+
+  const fetchHistorial=React.useCallback(async()=>{
     setHistLoading(true);
-    const data = await fbGet("historial");
+    const data=await fbGet("historial");
     if(data) setHistorial(Object.entries(data).map(([id,s])=>({id,...s})).sort((a,b)=>b.id.localeCompare(a.id)));
     else setHistorial([]);
     setHistLoading(false);
   },[]);
-
   React.useEffect(()=>{if(vistaPanel==="historial") fetchHistorial();},[vistaPanel,fetchHistorial]);
 
-  const eqIds = Object.keys(equipos);
-  const cross = buildCrossMap(equipos, fbData.registros, fbData.validaciones);
-  const counts = cross.reduce((acc,r)=>{const s=getStatus(r,eqIds);acc[s]=(acc[s]||0)+1;return acc;},{});
-  const filtered = filter==="all"?cross:cross.filter(r=>getStatus(r,eqIds)===filter);
-
-  // Team management — scoped per client
-  const ep = (path) => `${eqPath(clienteKey)}/${path}`;
-  const addTeam = async () => {
-    if(!newTeamName.trim()) return;
-    const id = uid();
-    const roles = ROLES_NORMAL.map(r=>({rol:r,nombre:""}));
-    await fbSet(ep(id),{nombre:newTeamName.trim(),integrantes:roles,tipo:"normal"});
-    setNewTeamName("");
-  };
-  const deleteTeam = async (id) => {
-    await fbDel(ep(id));
-    await fbDel(`registros/${id}`);
-    setConfirmDelTeam(null);
-  };
-  const updateIntegrante = async (teamId,idx,field,val) => {
-    const eq = equipos[teamId]; if(!eq) return;
-    const ints = [...(eq.integrantes||[])];
-    ints[idx] = {...ints[idx],[field]:val};
-    await fbSet(ep(`${teamId}/integrantes`),ints);
-  };
-  const addIntegrante = async (teamId,rol) => {
-    const eq = equipos[teamId]; if(!eq) return;
-    const ints = [...(eq.integrantes||[]),{rol,nombre:""}];
-    await fbSet(ep(`${teamId}/integrantes`),ints);
-  };
-  const removeIntegrante = async (teamId,idx) => {
-    const eq = equipos[teamId]; if(!eq) return;
-    const ints = (eq.integrantes||[]).filter((_,i)=>i!==idx);
-    await fbSet(ep(`${teamId}/integrantes`),ints);
-  };
-  const setTipoConteo = async (teamId,tipo) => {
-    const roles = tipo==="auditoria"?ROLES_AUDITORIA:ROLES_NORMAL;
-    await fbSet(ep(`${teamId}/integrantes`),roles.map(r=>({rol:r,nombre:""})));
-    await fbSet(ep(`${teamId}/tipo`),tipo);
-  };
-
-  // Edit/delete registros
-  const openEdit = (row,eqId) => {
-    const eqData = row.equipos[eqId]; if(!eqData) return;
-    setEditForm({eqId,fbId:eqData.fbId,ubicacion:row.ubicacion,sku:row.sku,cantidad:eqData.cantidad});
-    setEditModal({row,eqId});
-  };
-  const saveEdit = async () => {
-    const {eqId,fbId,ubicacion,sku,cantidad} = editForm;
-    const rec = await fbGet(`registros/${eqId}/${fbId}`); if(!rec) return;
-    const newSkus = (rec.skus||[]).map(s=>s.sku.toUpperCase()===editModal.row.sku?{...s,sku:sku.toUpperCase(),cantidad:Number(cantidad)}:s);
-    await fbSet(`registros/${eqId}/${fbId}`,{...rec,ubicacion:ubicacion.toUpperCase(),skus:newSkus});
-    await fbDel(`validaciones/${makeKey(editModal.row.ubicacion,editModal.row.sku)}`);
-    setEditModal(null); await fetchAll();
-  };
-  const deleteRecord = async () => {
-    await fbDel(`registros/${confirmDel.eqId}/${confirmDel.fbId}`);
-    await fbDel(`validaciones/${makeKey(confirmDel.ubicacion,confirmDel.sku)}`);
-    setConfirmDel(null); await fetchAll();
-  };
-
-  // CSV
-  const buildCSV = () => {
-    if(!cross.length) return "";
-    const eqNames = eqIds.map(id=>equipos[id]?.nombre||id);
-    const esc = v=>`"${(v||"").toString().replace(/"/g,'""')}"`;
-    const header = [
-      "Ubicacion","SKU",
-      ...eqNames.map(n=>`Cant_${n}`),
-      "Validado","Estatus",
-      ...eqNames.map(n=>`Mins_${n}`),
-      ...eqNames.map(n=>`Piezas_${n}`),
-      ...eqNames.map(n=>`Nota_${n}`),
-    ].join(",");
-    const body = cross.map(r=>{
-      const vals  = eqIds.map(id=>r.equipos[id]?.cantidad??"");
-      const mins  = eqIds.map(id=>r.equipos[id]?.duracionMins??"");
-      const pzas  = eqIds.map(id=>r.equipos[id]?.totalPiezas??"");
-      const notas = eqIds.map(id=>esc(r.equipos[id]?.nota||""));
-      return [r.ubicacion,r.sku,...vals,r.validado??"",getStatus(r,eqIds),...mins,...pzas,...notas].join(",");
-    });
-    return [header,...body].join("\n");
-  };
-  const exportCSV = () => {
-    const text=buildCSV(); if(!text) return;
-    try{const blob=new Blob([text],{type:"text/csv"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`conteo_${clienteKey||"general"}_${new Date().toISOString().slice(0,10)}.csv`;a.click();}catch(e){console.error(e);}
-  };
-  const handleCopy = () => {
-    const text=buildCSV(); if(!text) return;
-    if(navigator.clipboard) navigator.clipboard.writeText(text).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2500);});
-    else{const ta=document.createElement("textarea");ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand("copy");document.body.removeChild(ta);setCopied(true);setTimeout(()=>setCopied(false),2500);}
-  };
-  const handleValidar = async (key,cantidad) => {
-    setSaving(s=>({...s,[key]:true}));
-    await fbSet(`validaciones/${key}`,Number(cantidad));
-    setSaving(s=>({...s,[key]:false}));
-  };
-
-  const statBtns = [
+  const statBtns=[
     {k:"all",label:"Total",val:cross.length,color:"#D0D4E8"},
     {k:"ok",label:"✓ OK",val:counts.ok||0,color:"#00E6A8"},
     {k:"discrepancia",label:"⚠ Disc.",val:counts.discrepancia||0,color:"#FF5555"},
@@ -671,160 +959,194 @@ function SupervisorView({clienteKey, onBack, onReset}) {
     {k:"validado",label:"✓✓ Val.",val:counts.validado||0,color:"#C8AEFF"},
   ];
 
-  return (
+  return(
     <div style={S.root}>
       {/* MODALS */}
-      {editModal && (
+      {editModal&&(
         <div style={{position:"fixed",inset:0,background:"#000000EE",zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
-          <div style={{background:"#1C2030",border:"2px solid #C8AEFF",borderRadius:18,padding:"24px 20px",width:"100%",maxWidth:400}}>
-            <p style={{color:"#FFFFFF",fontSize:16,fontWeight:900,marginBottom:18}}>✏️ Editar — {equipos[editModal.eqId]?.nombre||editModal.eqId}</p>
-            {[["Ubicación","ubicacion"],["SKU","sku"]].map(([lbl,field])=>(
-              <div key={field} style={{marginBottom:12}}>
-                <label style={S.lbl}>{lbl}</label>
-                <input style={S.inp} value={editForm[field]} onChange={e=>setEditForm(f=>({...f,[field]:e.target.value}))}/>
+          <div style={{background:"#1C2030",border:"2px solid #C8AEFF",borderRadius:18,padding:"22px 18px",width:"100%",maxWidth:400}}>
+            <p style={{color:"#FFFFFF",fontSize:15,fontWeight:900,marginBottom:16}}>✏️ Editar — {equipos[editModal.eqId]?.nombre||editModal.eqId}</p>
+            {[["Ubicación","ubicacion"],["SKU","sku"]].map(([l,f])=>(
+              <div key={f} style={{marginBottom:10}}>
+                <label style={S.lbl}>{l}</label>
+                <input style={S.inp} value={editForm[f]} onChange={e=>setEditForm(fm=>({...fm,[f]:e.target.value}))}/>
               </div>
             ))}
             <label style={S.lbl}>Cantidad</label>
-            <input style={{...S.inp,fontSize:22,fontWeight:900,textAlign:"center"}} type="number" inputMode="numeric" min="0"
-              value={editForm.cantidad} onChange={e=>setEditForm(f=>({...f,cantidad:e.target.value}))}/>
-            <div style={{display:"flex",gap:10,marginTop:18}}>
-              <button style={{flex:1,background:"#2A2D3A",border:"2px solid #8A8FA8",color:"#FFFFFF",borderRadius:12,padding:"13px",fontSize:14,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}} onClick={()=>setEditModal(null)}>Cancelar</button>
-              <button style={{flex:1,background:"#C8AEFF",border:"none",color:"#0A0820",borderRadius:12,padding:"13px",fontSize:14,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}} onClick={saveEdit}>✓ Guardar</button>
+            <input style={{...S.inp,fontSize:20,fontWeight:900,textAlign:"center"}} type="number" inputMode="numeric" min="0" value={editForm.cantidad} onChange={e=>setEditForm(fm=>({...fm,cantidad:e.target.value}))}/>
+            <div style={{display:"flex",gap:10,marginTop:16}}>
+              <button style={{flex:1,background:"#2A2D3A",border:"2px solid #8A8FA8",color:"#FFFFFF",borderRadius:12,padding:"12px",fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}} onClick={()=>setEditModal(null)}>Cancelar</button>
+              <button style={{flex:1,background:"#C8AEFF",border:"none",color:"#0A0820",borderRadius:12,padding:"12px",fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}} onClick={saveEdit}>✓ Guardar</button>
             </div>
           </div>
         </div>
       )}
-      {confirmDel && <ConfirmModal title="¿Eliminar registro?" message={`${equipos[confirmDel.eqId]?.nombre||confirmDel.eqId} · ${confirmDel.ubicacion} · ${confirmDel.sku}\nEsta acción no se puede deshacer.`} confirmLabel="Sí, eliminar" onConfirm={deleteRecord} onCancel={()=>setConfirmDel(null)}/>}
-      {confirmDelTeam && <ConfirmModal title="¿Eliminar equipo?" message={`Se eliminará "${equipos[confirmDelTeam]?.nombre}" y todos sus registros.`} confirmLabel="Sí, eliminar" onConfirm={()=>deleteTeam(confirmDelTeam)} onCancel={()=>setConfirmDelTeam(null)}/>}
-      {showCopyModal && (
+      {confirmDel&&<ConfirmModal title="¿Eliminar registro?" message={(equipos[confirmDel.eqId]?.nombre||confirmDel.eqId)+" · "+confirmDel.ubicacion+" · "+confirmDel.sku} confirmLabel="Sí, eliminar" onConfirm={deleteRecord} onCancel={()=>setConfirmDel(null)}/>}
+      {confirmDelTeam&&<ConfirmModal title="¿Eliminar equipo?" message={"Se eliminará "+equipos[confirmDelTeam]?.nombre+" y todos sus registros."} confirmLabel="Sí, eliminar" onConfirm={()=>deleteTeam(confirmDelTeam)} onCancel={()=>setConfirmDelTeam(null)}/>}
+      {confirmReset&&<ConfirmModal title="¿Reiniciar conteo?" message="Se borrarán todos los registros y validaciones. Los equipos se conservan." confirmLabel="Sí, reiniciar" onConfirm={handleReset} onCancel={()=>setConfirmReset(false)}/>}
+      {confirmDelEmp&&<ConfirmModal title="¿Eliminar empleado?" message={"Se eliminará a "+confirmDelEmp.nombre+" del directorio."} confirmLabel="Sí, eliminar" onConfirm={async()=>{await fbDel("empleados/"+confirmDelEmp.id);setConfirmDelEmp(null);}} onCancel={()=>setConfirmDelEmp(null)}/>}
+      {showCopy&&(
         <div style={{position:"fixed",inset:0,background:"#000000EE",zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
-          <div style={{background:"#1C2030",border:"2px solid #4A4D5A",borderRadius:18,padding:"24px 20px",width:"100%",maxWidth:480}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-              <p style={{color:"#FFFFFF",fontSize:15,fontWeight:800}}>Contenido CSV</p>
-              <button style={{...S.navBtn,fontSize:12}} onClick={()=>setShowCopyModal(false)}>✕ Cerrar</button>
+          <div style={{background:"#1C2030",border:"2px solid #4A4D5A",borderRadius:18,padding:"22px 18px",width:"100%",maxWidth:480}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+              <p style={{color:"#FFFFFF",fontSize:14,fontWeight:800}}>Contenido CSV</p>
+              <button style={{...S.navBtn,fontSize:11}} onClick={()=>setShowCopy(false)}>✕ Cerrar</button>
             </div>
-            <textarea readOnly style={{...S.inp,height:180,resize:"none",fontSize:11,lineHeight:1.6,fontFamily:"monospace"}} value={buildCSV()} onFocus={e=>e.target.select()}/>
-            <button style={{...S.solidBtn,background:copied?"#00E6A8":accentColor,color:"#000",marginTop:12,fontSize:15}} onClick={handleCopy}>
-              {copied?"✓ Copiado":"📋 Copiar todo"}
-            </button>
+            <textarea readOnly style={{...S.inp,height:160,resize:"none",fontSize:11,lineHeight:1.6,fontFamily:"monospace"}} value={buildCSV()} onFocus={e=>e.target.select()}/>
+            <button style={{...S.solidBtn,background:copied?"#00E6A8":"#C8AEFF",color:"#000",marginTop:10,fontSize:14}} onClick={handleCopy}>{copied?"✓ Copiado":"📋 Copiar todo"}</button>
           </div>
         </div>
       )}
 
       {/* NAV */}
-      <div style={{...S.nav,borderColor:accentColor}}>
+      <div style={{...S.nav,borderColor:"#C8AEFF"}}>
         <button style={S.navBtn} onClick={onBack}>← Salir</button>
-        <div style={{flex:1}}>
-          <div style={{color:accentColor,fontWeight:900,fontSize:15,letterSpacing:1}}>SUPERVISOR</div>
-          <div style={{color:"#D0D4E8",fontSize:11,fontWeight:600}}>{cliente?.nombre||"Sin cliente"} · {lastUpdate||"conectando..."}</div>
-        </div>
-        <button style={{...S.navBtn,color:"#C8AEFF",borderColor:"#C8AEFF",marginRight:4,fontSize:16}} onClick={async()=>{setRefreshing(true);await fetchAll();setRefreshing(false);}}>
+        <div style={{flex:1,color:"#C8AEFF",fontWeight:900,fontSize:14,letterSpacing:1}}>ADMINISTRADOR</div>
+        <button style={{...S.navBtn,color:"#C8AEFF",borderColor:"#C8AEFF",marginRight:6,fontSize:15}} onClick={async()=>{setRefreshing(true);await fetchAll();setRefreshing(false);}}>
           {refreshing?"...":"⟳"}
         </button>
-        <button style={S.resetBtn} onClick={onReset}>↺</button>
+        <button style={S.resetBtn} onClick={()=>setConfirmReset(true)}>↺</button>
+      </div>
+      <div style={{padding:"8px 16px 4px",color:"#6A6F82",fontSize:10,fontWeight:600}}>
+        {lastUpdate?"Actualizado: "+lastUpdate:"Conectando..."}
       </div>
 
       {/* TABS */}
-      <div style={{display:"flex",borderBottom:"2px solid #2E3240"}}>
-        {[["conteo","📋 Conteo"],["equipos","👥 Equipos"],["historial","🕐 Historial"]].map(([v,lbl])=>(
+      <div style={{display:"flex",borderBottom:"2px solid #2E3240",overflowX:"auto"}}>
+        {[["empleados","👥 Empleados"],["conteo","📋 Conteo"],["equipos","⚙️ Equipos"],["historial","🕐 Historial"]].map(([v,l])=>(
           <button key={v} onClick={()=>setVistaPanel(v)}
-            style={{flex:1,padding:"12px 6px",fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit",border:"none",
+            style={{flex:1,minWidth:80,padding:"11px 6px",fontSize:12,fontWeight:800,cursor:"pointer",fontFamily:"inherit",border:"none",whiteSpace:"nowrap",
               background:vistaPanel===v?"#1C2030":"transparent",
-              color:vistaPanel===v?accentColor:"#6A6F82",
-              borderBottom:vistaPanel===v?`3px solid ${accentColor}`:"3px solid transparent"}}>
-            {lbl}
+              color:vistaPanel===v?"#C8AEFF":"#6A6F82",
+              borderBottom:vistaPanel===v?"3px solid #C8AEFF":"3px solid transparent"}}>
+            {l}
           </button>
         ))}
       </div>
 
-      {/* ── TAB: EQUIPOS ── */}
-      {vistaPanel==="equipos" && (
-        <div style={{padding:"16px",display:"flex",flexDirection:"column",gap:14}}>
-          <div style={{display:"flex",gap:8}}>
-            <input style={{...S.inp,flex:1}} placeholder="Nombre del nuevo equipo (Ej: Equipo A)"
-              value={newTeamName} onChange={e=>setNewTeamName(e.target.value)}
-              onKeyDown={e=>e.key==="Enter"&&addTeam()}/>
-            <button style={{background:"#00E6A8",border:"none",color:"#000",borderRadius:10,padding:"0 18px",fontSize:14,fontWeight:900,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}
-              onClick={addTeam}>+ Nuevo</button>
-          </div>
-
-          {Object.keys(equipos).length===0 && (
-            <div style={{border:"2px dashed #3A3D4A",borderRadius:12,padding:"24px",textAlign:"center"}}>
-              <p style={{color:"#6A6F82",fontSize:13}}>No hay equipos. Agrega uno arriba.</p>
-            </div>
-          )}
-
-          {Object.entries(equipos).map(([id,eq])=>(
-            <div key={id} style={{background:"#1C2030",border:"2px solid #3A3D4A",borderRadius:14,padding:"16px"}}>
-              <div style={{display:"flex",gap:8,marginBottom:14,alignItems:"center"}}>
-                <input style={{...S.inp,flex:1,fontSize:16,fontWeight:900}}
-                  value={eq.nombre||""} placeholder="Nombre del equipo"
-                  onChange={e=>fbSet(`equipos/${id}/nombre`,e.target.value)}/>
-                <button style={{background:"#2A1515",border:"2px solid #FF5555",color:"#FF5555",borderRadius:8,padding:"8px 12px",fontSize:12,fontWeight:800,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}
-                  onClick={()=>setConfirmDelTeam(id)}>🗑 Quitar</button>
+      {/* ── TAB: EMPLEADOS ── */}
+      {vistaPanel==="empleados"&&(
+        <div style={{padding:"14px",display:"flex",flexDirection:"column",gap:14}}>
+          {/* Activos ahora */}
+          <div>
+            <span style={S.secLbl}>En actividad ahora ({activosList.length})</span>
+            {activosList.length===0?(
+              <div style={{border:"2px dashed #3A3D4A",borderRadius:12,padding:"20px",textAlign:"center"}}>
+                <p style={{color:"#6A6F82",fontSize:13}}>Ningún empleado activo en este momento</p>
               </div>
-
-              {/* Tipo de conteo */}
-              <label style={S.lbl}>Tipo de conteo</label>
-              <div style={{display:"flex",gap:8,marginBottom:14}}>
-                {[["normal","🔄 Normal"],["auditoria","🔍 Auditoría"]].map(([tipo,lbl])=>{
-                  const activo = eq.tipo===tipo||(!eq.tipo&&tipo==="normal");
-                  return (
-                    <button key={tipo} onClick={()=>setTipoConteo(id,tipo)}
-                      style={{flex:1,padding:"9px",borderRadius:9,fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit",
-                        background:activo?"#2A3A50":"#0E1016",border:`2px solid ${activo?"#7B9FFF":"#3A3D4A"}`,
-                        color:activo?"#7B9FFF":"#6A6F82"}}>
-                      {lbl}
-                    </button>
+            ):(
+              <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                {activosList.map((emp,i)=>{
+                  const isConteo=emp.actividad==="Conteo";
+                  const color=isConteo?"#7B9FFF":"#69CAFF";
+                  return(
+                    <div key={i} style={{background:"#1C2030",border:"2px solid "+color+"55",borderRadius:12,padding:"12px 14px",display:"flex",alignItems:"center",gap:12}}>
+                      <div style={{width:36,height:36,borderRadius:"50%",background:color+"22",border:"2px solid "+color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>
+                        {isConteo?"📋":"📦"}
+                      </div>
+                      <div style={{flex:1}}>
+                        <div style={{color:"#FFFFFF",fontWeight:900,fontSize:15}}>{emp.nombre}</div>
+                        <div style={{color:color,fontSize:11,fontWeight:700,marginTop:2}}>{emp.actividad} · {emp.cliente}</div>
+                      </div>
+                      <div style={{color:"#6A6F82",fontSize:11}}>{emp.hora}</div>
+                    </div>
                   );
                 })}
               </div>
+            )}
+          </div>
 
-              {/* Integrantes */}
-              <label style={S.lbl}>Integrantes</label>
-              {(eq.integrantes||[]).map((p,idx)=>(
-                <div key={idx} style={{display:"flex",gap:8,marginBottom:8,alignItems:"center"}}>
-                  <div style={{background:"#0E1016",border:"1px solid #3A3D4A",borderRadius:8,padding:"9px 12px",fontSize:12,fontWeight:700,color:"#A0A4B8",minWidth:90,whiteSpace:"nowrap"}}>
-                    {p.rol}
+          {/* Directorio de empleados */}
+          <div>
+            <span style={S.secLbl}>Directorio ({listaEmpleados.length})</span>
+            {listaEmpleados.length===0?(
+              <p style={{color:"#6A6F82",fontSize:12,textAlign:"center"}}>Sin empleados registrados</p>
+            ):(
+              <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                {listaEmpleados.map(([id,emp])=>(
+                  <div key={id} style={{background:"#1C2030",border:"1px solid #2E3240",borderRadius:10,padding:"10px 14px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                    <span style={{color:"#E0E4F8",fontSize:14,fontWeight:600}}>👤 {emp.nombre||emp}</span>
+                    <button style={{background:"#2A1515",border:"1px solid #FF5555",color:"#FF5555",borderRadius:7,padding:"5px 10px",fontSize:11,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}
+                      onClick={()=>setConfirmDelEmp({id,nombre:emp.nombre||emp})}>✕</button>
                   </div>
-                  <input style={{...S.inp,flex:1,fontSize:14}} placeholder={`Nombre del ${p.rol}`}
-                    value={p.nombre||""}
-                    onChange={e=>updateIntegrante(id,idx,"nombre",e.target.value)}/>
-                  <button style={{background:"#2A1515",border:"2px solid #FF5555",color:"#FF5555",borderRadius:8,padding:"8px 10px",fontSize:13,cursor:"pointer",fontFamily:"inherit"}}
-                    onClick={()=>removeIntegrante(id,idx)}>✕</button>
-                </div>
-              ))}
-              <div style={{display:"flex",gap:8,marginTop:6}}>
-                {(eq.tipo==="auditoria"?ROLES_AUDITORIA:ROLES_NORMAL).map(rol=>(
-                  <button key={rol} style={{flex:1,background:"transparent",border:"1px dashed #4A4D5A",color:"#8A8FA8",borderRadius:8,padding:"8px",fontSize:12,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}
-                    onClick={()=>addIntegrante(id,rol)}>+ {rol}</button>
                 ))}
               </div>
-            </div>
-          ))}
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── TAB: EQUIPOS ── */}
+      {vistaPanel==="equipos"&&(
+        <div style={{padding:"14px",display:"flex",flexDirection:"column",gap:12}}>
+          <div>
+            <label style={S.secLbl}>Cliente para configurar equipos</label>
+            <ClienteSelector onSelect={setClienteKey} selectedKey={clienteKey}/>
+          </div>
+          {clienteKey&&(
+            <>
+              <div style={{display:"flex",gap:8}}>
+                <input style={{...S.inp,flex:1}} placeholder="Nombre del nuevo equipo" value={newTeamName} onChange={e=>setNewTeamName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addTeam()}/>
+                <button style={{background:"#00E6A8",border:"none",color:"#000",borderRadius:10,padding:"0 16px",fontSize:13,fontWeight:900,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}} onClick={addTeam}>+ Nuevo</button>
+              </div>
+              {Object.keys(equipos).length===0&&(
+                <div style={{border:"2px dashed #3A3D4A",borderRadius:12,padding:"20px",textAlign:"center"}}>
+                  <p style={{color:"#6A6F82",fontSize:13}}>Sin equipos para este cliente. Agrega uno arriba.</p>
+                </div>
+              )}
+              {Object.entries(equipos).map(([id,eq])=>(
+                <div key={id} style={{...S.card}}>
+                  <div style={{display:"flex",gap:8,marginBottom:12,alignItems:"center"}}>
+                    <input style={{...S.inp,flex:1,fontSize:15,fontWeight:900}} value={eq.nombre||""} placeholder="Nombre del equipo" onChange={e=>fbSet(ep(id+"/nombre"),e.target.value)}/>
+                    <button style={{background:"#2A1515",border:"2px solid #FF5555",color:"#FF5555",borderRadius:8,padding:"7px 11px",fontSize:11,fontWeight:800,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}} onClick={()=>setConfirmDelTeam(id)}>🗑 Quitar</button>
+                  </div>
+                  <label style={S.lbl}>Tipo de conteo</label>
+                  <div style={{display:"flex",gap:8,marginBottom:12}}>
+                    {[["normal","🔄 Normal"],["auditoria","🔍 Auditoría"]].map(([tipo,lbl])=>{
+                      const act=eq.tipo===tipo||(!eq.tipo&&tipo==="normal");
+                      return(<button key={tipo} onClick={()=>setTipoConteo(id,tipo)} style={{flex:1,padding:"8px",borderRadius:9,fontSize:12,fontWeight:800,cursor:"pointer",fontFamily:"inherit",background:act?"#2A3A50":"#0E1016",border:"2px solid "+(act?"#7B9FFF":"#3A3D4A"),color:act?"#7B9FFF":"#6A6F82"}}>{lbl}</button>);
+                    })}
+                  </div>
+                  <label style={S.lbl}>Integrantes</label>
+                  {(eq.integrantes||[]).map((p,idx)=>(
+                    <div key={idx} style={{display:"flex",gap:8,marginBottom:7,alignItems:"center"}}>
+                      <div style={{background:"#0E1016",border:"1px solid #3A3D4A",borderRadius:7,padding:"8px 11px",fontSize:11,fontWeight:700,color:"#A0A4B8",minWidth:85,whiteSpace:"nowrap"}}>{p.rol}</div>
+                      <input style={{...S.inp,flex:1,fontSize:13}} placeholder={"Nombre del "+p.rol} value={p.nombre||""} onChange={e=>updInt(id,idx,"nombre",e.target.value)}/>
+                      <button style={{background:"#2A1515",border:"2px solid #FF5555",color:"#FF5555",borderRadius:7,padding:"7px 9px",fontSize:12,cursor:"pointer",fontFamily:"inherit"}} onClick={()=>remInt(id,idx)}>✕</button>
+                    </div>
+                  ))}
+                  <div style={{display:"flex",gap:8,marginTop:6}}>
+                    {(eq.tipo==="auditoria"?ROLES_AUDITORIA:ROLES_NORMAL).map(rol=>(
+                      <button key={rol} style={{flex:1,background:"transparent",border:"1px dashed #4A4D5A",color:"#8A8FA8",borderRadius:8,padding:"7px",fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"inherit"}} onClick={()=>addInt(id,rol)}>+ {rol}</button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
         </div>
       )}
 
       {/* ── TAB: HISTORIAL ── */}
-      {vistaPanel==="historial" && (
-        <div style={{padding:"16px",display:"flex",flexDirection:"column",gap:12}}>
+      {vistaPanel==="historial"&&(
+        <div style={{padding:"14px",display:"flex",flexDirection:"column",gap:10}}>
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
             <span style={S.secLbl}>Sesiones anteriores</span>
             <button style={{...S.navBtn,fontSize:11}} onClick={fetchHistorial}>⟳ Actualizar</button>
           </div>
-          {histLoading && <p style={{color:"#8A8FA8",textAlign:"center",marginTop:24,fontSize:14}}>Cargando...</p>}
-          {!histLoading && historial.length===0 && <p style={{color:"#8A8FA8",textAlign:"center",marginTop:24,fontSize:13}}>Sin sesiones anteriores</p>}
+          {histLoading&&<p style={{color:"#8A8FA8",textAlign:"center",marginTop:20,fontSize:13}}>Cargando...</p>}
+          {!histLoading&&historial.length===0&&<p style={{color:"#8A8FA8",textAlign:"center",marginTop:20,fontSize:13}}>Sin sesiones anteriores</p>}
           {historial.map(s=>{
             const c=CLIENTES[s.cliente];
-            return (
-              <div key={s.id} style={{background:"#1C2030",border:`2px solid ${c?c.color+"66":"#3A3D4A"}`,borderRadius:14,padding:"14px"}}>
-                <div style={{color:c?c.color:"#C8AEFF",fontWeight:900,fontSize:15,marginBottom:4}}>{c?c.nombre:s.cliente}</div>
-                <div style={{color:"#C0C4D8",fontSize:12,marginBottom:12}}>{s.fecha} · {s.hora}</div>
-                <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            return(
+              <div key={s.id} style={{background:"#1C2030",border:"2px solid "+(c?c.color+"66":"#3A3D4A"),borderRadius:13,padding:"13px"}}>
+                <div style={{color:c?c.color:"#C8AEFF",fontWeight:900,fontSize:14,marginBottom:3}}>{c?c.nombre:s.cliente}</div>
+                <div style={{color:"#C0C4D8",fontSize:11,marginBottom:10}}>{s.fecha} · {s.hora}</div>
+                <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
                   {[{l:"Registros",v:s.totalRegistros||0,c:"#D0D4E8"},{l:"Disc.",v:s.discrepancias||0,c:"#FF5555"},{l:"Validados",v:s.validados||0,c:"#C8AEFF"}].map(st=>(
-                    <div key={st.l} style={{background:"#0E1016",border:`1px solid ${st.c}44`,borderRadius:10,padding:"9px 14px",textAlign:"center",minWidth:75}}>
-                      <div style={{fontSize:20,fontWeight:900,color:st.c}}>{st.v}</div>
-                      <div style={{fontSize:10,color:"#8A8FA8",fontWeight:700,marginTop:2}}>{st.l}</div>
+                    <div key={st.l} style={{background:"#0E1016",border:"1px solid "+st.c+"44",borderRadius:9,padding:"8px 12px",textAlign:"center",minWidth:70}}>
+                      <div style={{fontSize:18,fontWeight:900,color:st.c}}>{st.v}</div>
+                      <div style={{fontSize:9,color:"#8A8FA8",fontWeight:700,marginTop:2}}>{st.l}</div>
                     </div>
                   ))}
                 </div>
@@ -835,440 +1157,113 @@ function SupervisorView({clienteKey, onBack, onReset}) {
       )}
 
       {/* ── TAB: CONTEO ── */}
-      {vistaPanel==="conteo" && (
+      {vistaPanel==="conteo"&&(
         <>
-          <div style={{display:"flex",gap:6,padding:"12px 16px",overflowX:"auto"}}>
-            {statBtns.map(s=>(
-              <button key={s.k} onClick={()=>setFilter(s.k)}
-                style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,
-                  border:`2px solid ${filter===s.k?s.color:"#4A4D5A"}`,borderRadius:12,
-                  padding:"10px 12px",cursor:"pointer",fontFamily:"inherit",
-                  background:filter===s.k?s.color+"22":"#1C2030",minWidth:64,flexShrink:0}}>
-                <span style={{fontSize:22,fontWeight:900,color:s.color}}>{s.val}</span>
-                <span style={{fontSize:10,color:filter===s.k?s.color:"#C0C4D8",fontWeight:800}}>{s.label}</span>
-              </button>
-            ))}
-          </div>
-          <div style={{padding:"0 16px 12px",display:"flex",gap:8}}>
-            <button style={{...S.solidBtn,background:accentColor,color:"#000",fontSize:14}} onClick={exportCSV}>↓ Descargar CSV</button>
-            <button style={{...S.solidBtn,background:"#2A2D3A",border:"2px solid #6A6F82",color:"#FFFFFF",fontSize:14}} onClick={()=>setShowCopyModal(true)}>📋 Copiar</button>
-          </div>
-          <div style={{padding:"0 16px 60px",display:"flex",flexDirection:"column",gap:12}}>
-            {filtered.length===0 && <p style={{color:"#A0A4B8",textAlign:"center",marginTop:40,fontSize:15,fontWeight:600}}>Sin registros aún</p>}
-            {filtered.map(row=>{
-              const key = makeKey(row.ubicacion,row.sku);
-              const status = getStatus(row,eqIds);
-              const sc = STATUS_CFG[status];
-              return (
-                <div key={key} style={{background:"#1C2030",border:`2px solid ${sc.color}`,borderRadius:16,padding:"14px"}}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10,gap:8}}>
-                    <div>
-                      <div style={{color:accentColor,fontWeight:900,fontSize:17}}>{row.ubicacion}</div>
-                      <div style={{color:"#E0E4F8",fontSize:14,fontWeight:700,marginTop:2}}>{row.sku}</div>
-                    </div>
-                    <Badge status={status}/>
-                  </div>
-
-                  <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-                    {eqIds.map(id=>{
-                      const eqData = row.equipos[id];
-                      return (
-                        <div key={id} style={{flex:1,minWidth:80,background:"#0E1016",border:`2px solid ${eqData?sc.color+"55":"#2A2D3A"}`,borderRadius:12,padding:"10px 8px",textAlign:"center"}}>
-                          <div style={{fontSize:10,color:"#C0C4D8",letterSpacing:1,fontWeight:800,marginBottom:5}}>{equipos[id]?.nombre||id}</div>
-                          <div style={{fontSize:28,fontWeight:900,color:eqData?"#FFFFFF":"#4A4D5A"}}>{eqData?.cantidad??"—"}</div>
-                          {eqData?.duracionMins!=null && <div style={{fontSize:10,color:"#FFD166",marginTop:3,fontWeight:700}}>⏱ {eqData.duracionMins} min</div>}
-                          {eqData?.nota && <div style={{fontSize:10,color:"#FF9955",marginTop:2}}>⚠ {eqData.nota}</div>}
+          {/* Cliente selector para conteo */}
+          {!clienteKey?(
+            <div style={{padding:"14px"}}>
+              <label style={S.secLbl}>Selecciona cliente para ver el conteo</label>
+              <ClienteSelector onSelect={setClienteKey} selectedKey={clienteKey}/>
+            </div>
+          ):(
+            <>
+              <div style={{padding:"10px 14px 0",display:"flex",alignItems:"center",gap:10}}>
+                <div style={{flex:1,color:CLIENTES[clienteKey]?.color||"#C8AEFF",fontWeight:800,fontSize:14}}>{CLIENTES[clienteKey]?.nombre}</div>
+                <button style={{...S.cambiarBtn,fontSize:11}} onClick={()=>setClienteKey("")}>Cambiar</button>
+              </div>
+              <div style={{display:"flex",gap:6,padding:"10px 14px",overflowX:"auto"}}>
+                {statBtns.map(s=>(
+                  <button key={s.k} onClick={()=>setFilter(s.k)}
+                    style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,border:"2px solid "+(filter===s.k?s.color:"#4A4D5A"),borderRadius:11,padding:"9px 11px",cursor:"pointer",fontFamily:"inherit",background:filter===s.k?s.color+"22":"#1C2030",minWidth:60,flexShrink:0}}>
+                    <span style={{fontSize:20,fontWeight:900,color:s.color}}>{s.val}</span>
+                    <span style={{fontSize:9,color:filter===s.k?s.color:"#C0C4D8",fontWeight:800}}>{s.label}</span>
+                  </button>
+                ))}
+              </div>
+              <div style={{padding:"0 14px 12px",display:"flex",gap:8}}>
+                <button style={{...S.solidBtn,background:CLIENTES[clienteKey]?.color||"#C8AEFF",color:"#000",fontSize:13}} onClick={exportCSV}>↓ CSV</button>
+                <button style={{...S.solidBtn,background:"#2A2D3A",border:"2px solid #6A6F82",color:"#FFFFFF",fontSize:13}} onClick={()=>setShowCopy(true)}>📋 Copiar</button>
+              </div>
+              <div style={{padding:"0 14px 60px",display:"flex",flexDirection:"column",gap:10}}>
+                {filtered.length===0&&<p style={{color:"#A0A4B8",textAlign:"center",marginTop:32,fontSize:14,fontWeight:600}}>Sin registros aún</p>}
+                {filtered.map(row=>{
+                  const key=makeKey(row.ubicacion,row.sku);
+                  const status=getStatus(row,eqIds);
+                  const sc=STATUS_CFG[status];
+                  return(
+                    <div key={key} style={{background:"#1C2030",border:"2px solid "+sc.color,borderRadius:14,padding:"13px"}}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:9,gap:8}}>
+                        <div>
+                          <div style={{color:CLIENTES[clienteKey]?.color||"#C8AEFF",fontWeight:900,fontSize:16}}>{row.ubicacion}</div>
+                          <div style={{color:"#E0E4F8",fontSize:13,fontWeight:700,marginTop:2}}>{row.sku}</div>
                         </div>
-                      );
-                    })}
-                    {row.validado!==null && row.validado!==undefined && (
-                      <>
-                        <div style={{color:"#6A6F82",fontSize:18,alignSelf:"center",fontWeight:900}}>→</div>
-                        <div style={{flex:1,minWidth:80,background:"#C8AEFF18",border:"2px solid #C8AEFF",borderRadius:12,padding:"10px 8px",textAlign:"center"}}>
-                          <div style={{fontSize:10,color:"#C8AEFF",letterSpacing:1,fontWeight:800,marginBottom:5}}>VALIDADO</div>
-                          <div style={{fontSize:28,fontWeight:900,color:"#C8AEFF"}}>{row.validado}</div>
-                        </div>
-                      </>
-                    )}
-                  </div>
-
-                  <div style={{display:"flex",gap:6,marginTop:10,flexWrap:"wrap"}}>
-                    {eqIds.filter(id=>row.equipos[id]).map(id=>(
-                      <React.Fragment key={id}>
-                        <button style={{background:"#1E2A40",border:"2px solid #4A6FA8",color:"#A8C8FF",borderRadius:8,padding:"6px 12px",fontSize:11,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}
-                          onClick={()=>openEdit(row,id)}>✏️ {equipos[id]?.nombre||id}</button>
-                        <button style={{background:"#2A1515",border:"2px solid #FF5555",color:"#FF5555",borderRadius:8,padding:"6px 10px",fontSize:11,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}
-                          onClick={()=>setConfirmDel({fbId:row.equipos[id].fbId,eqId:id,ubicacion:row.ubicacion,sku:row.sku})}>🗑</button>
-                      </React.Fragment>
-                    ))}
-                  </div>
-
-                  {status==="discrepancia" && row.validado===null && (
-                    <div style={{marginTop:12,background:"#200F0F",border:"2px solid #FF5555",borderRadius:12,padding:"12px"}}>
-                      <p style={{color:"#FF5555",fontSize:14,fontWeight:800,marginBottom:10}}>⚠ Requiere 3er conteo:</p>
-                      <div style={{display:"flex",gap:8}}>
-                        <input style={{...S.inp,flex:1,textAlign:"center",fontSize:24,fontWeight:900}}
-                          type="number" inputMode="numeric" min="0" placeholder="?"
-                          value={terceros[key]??""} onChange={e=>setTerceros(t=>({...t,[key]:e.target.value}))}/>
-                        <button style={{background:"#FF5555",border:"none",color:"#FFFFFF",borderRadius:10,padding:"0 18px",fontSize:15,fontWeight:900,cursor:"pointer",fontFamily:"inherit",minWidth:80}}
-                          onClick={()=>{if(terceros[key]!=null&&terceros[key]!=="")handleValidar(key,terceros[key]);}}>
-                          {saving[key]?"...":"✓ OK"}
-                        </button>
+                        <Badge status={status}/>
                       </div>
+                      <div style={{display:"flex",gap:7,flexWrap:"wrap"}}>
+                        {eqIds.map(id=>{
+                          const d=row.equipos[id];
+                          return(
+                            <div key={id} style={{flex:1,minWidth:75,background:"#0E1016",border:"2px solid "+(d?sc.color+"44":"#2A2D3A"),borderRadius:11,padding:"9px 7px",textAlign:"center"}}>
+                              <div style={{fontSize:9,color:"#C0C4D8",letterSpacing:1,fontWeight:800,marginBottom:4}}>{equipos[id]?.nombre||id}</div>
+                              <div style={{fontSize:26,fontWeight:900,color:d?"#FFFFFF":"#4A4D5A"}}>{d?.cantidad??"—"}</div>
+                              {d?.duracionMins!=null&&<div style={{fontSize:9,color:"#FFD166",marginTop:2,fontWeight:700}}>⏱ {d.duracionMins}min</div>}
+                              {d?.nota&&<div style={{fontSize:9,color:"#FF9955",marginTop:2}}>⚠ {d.nota}</div>}
+                            </div>
+                          );
+                        })}
+                        {row.validado!==null&&row.validado!==undefined&&(
+                          <>
+                            <div style={{color:"#6A6F82",fontSize:18,alignSelf:"center",fontWeight:900}}>→</div>
+                            <div style={{flex:1,minWidth:75,background:"#C8AEFF18",border:"2px solid #C8AEFF",borderRadius:11,padding:"9px 7px",textAlign:"center"}}>
+                              <div style={{fontSize:9,color:"#C8AEFF",letterSpacing:1,fontWeight:800,marginBottom:4}}>VALIDADO</div>
+                              <div style={{fontSize:26,fontWeight:900,color:"#C8AEFF"}}>{row.validado}</div>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                      <div style={{display:"flex",gap:5,marginTop:9,flexWrap:"wrap"}}>
+                        {eqIds.filter(id=>row.equipos[id]).map(id=>(
+                          <React.Fragment key={id}>
+                            <button style={{background:"#1E2A40",border:"2px solid #4A6FA8",color:"#A8C8FF",borderRadius:7,padding:"5px 10px",fontSize:10,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}} onClick={()=>openEdit(row,id)}>✏️ {equipos[id]?.nombre||id}</button>
+                            <button style={{background:"#2A1515",border:"2px solid #FF5555",color:"#FF5555",borderRadius:7,padding:"5px 9px",fontSize:10,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}} onClick={()=>setConfirmDel({fbId:row.equipos[id].fbId,eqId:id,ubicacion:row.ubicacion,sku:row.sku})}>🗑</button>
+                          </React.Fragment>
+                        ))}
+                      </div>
+                      {status==="discrepancia"&&row.validado===null&&(
+                        <div style={{marginTop:10,background:"#200F0F",border:"2px solid #FF5555",borderRadius:11,padding:"11px"}}>
+                          <p style={{color:"#FF5555",fontSize:13,fontWeight:800,marginBottom:8}}>⚠ Requiere 3er conteo:</p>
+                          <div style={{display:"flex",gap:8}}>
+                            <input style={{...S.inp,flex:1,textAlign:"center",fontSize:22,fontWeight:900}} type="number" inputMode="numeric" min="0" placeholder="?" value={terceros[key]??""} onChange={e=>setTerceros(t=>({...t,[key]:e.target.value}))}/>
+                            <button style={{background:"#FF5555",border:"none",color:"#FFFFFF",borderRadius:9,padding:"0 16px",fontSize:14,fontWeight:900,cursor:"pointer",fontFamily:"inherit",minWidth:75}} onClick={()=>{if(terceros[key]!=null&&terceros[key]!=="")handleValidar(key,terceros[key]);}}>
+                              {saving[key]?"...":"✓ OK"}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                      {status==="ok"&&row.validado===null&&(
+                        <button style={{marginTop:9,background:"#00E6A820",border:"2px solid #00E6A8",color:"#00E6A8",borderRadius:9,padding:"11px",fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit",width:"100%"}}
+                          onClick={()=>handleValidar(key,Object.values(row.equipos)[0]?.cantidad)}>
+                          {saving[key]?"Guardando...":"✓ Confirmar cantidad"}
+                        </button>
+                      )}
                     </div>
-                  )}
-                  {status==="ok" && row.validado===null && (
-                    <button style={{marginTop:10,background:"#00E6A820",border:"2px solid #00E6A8",color:"#00E6A8",borderRadius:10,padding:"12px",fontSize:14,fontWeight:800,cursor:"pointer",fontFamily:"inherit",width:"100%"}}
-                      onClick={()=>handleValidar(key,Object.values(row.equipos)[0]?.cantidad)}>
-                      {saving[key]?"Guardando...":"✓ Confirmar cantidad"}
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </>
       )}
     </div>
   );
 }
 
-// ── PIN SCREEN (reutilizable) ─────────────────────────────────────────────────
-function PinScreen({titulo, emoji, accentColor, pinCorrecto, onSuccess, onBack}) {
-  const [pin, setPin] = React.useState("");
-  const [error, setError] = React.useState(false);
-  const check = () => {
-    if (pin === pinCorrecto) { onSuccess(); }
-    else { setError(true); setPin(""); }
-  };
-  return (
-    <div style={S.center}>
-      <div style={S.pinCard}>
-        <div style={{fontSize:34,marginBottom:10,textAlign:"center"}}>{emoji}</div>
-        <p style={{color:"#FFFFFF",letterSpacing:2,fontSize:15,fontWeight:800,textAlign:"center",marginBottom:18}}>{titulo}</p>
-        <input style={{...S.inp,textAlign:"center",fontSize:26,fontWeight:900,letterSpacing:10}}
-          type="password" inputMode="numeric" maxLength={4} value={pin}
-          onChange={e=>{setPin(e.target.value);setError(false);}}
-          placeholder="••••"
-          onKeyDown={e=>e.key==="Enter"&&check()}/>
-        {error && <p style={{color:"#FF5555",fontSize:13,fontWeight:800,textAlign:"center",marginTop:8}}>PIN incorrecto</p>}
-        <button style={{...S.solidBtn,background:accentColor,color:"#0A0820",marginTop:16}} onClick={check}>Entrar</button>
-        <button style={S.textBtn} onClick={onBack}>← Volver</button>
-      </div>
-    </div>
-  );
-}
-
-// ── RECEPCIONISTA VIEW ────────────────────────────────────────────────────────
-function RecepcionistaView({clienteKey, onBack}) {
-  const accentColor = "#69CAFF";
-  const [contenedores, setContenedores] = React.useState({});
-  const [vistaRec, setVistaRec] = React.useState("lista"); // lista | nuevo | detalle
-  const [selectedId, setSelectedId] = React.useState(null);
-  const [confirmDelCont, setConfirmDelCont] = React.useState(null);
-
-  // Form state - nuevo contenedor
-  const [numContenedor, setNumContenedor] = React.useState("");
-  const [transportista, setTransportista] = React.useState("");
-  const [clienteContKey, setClienteContKey] = React.useState(clienteKey||"");
-  const [skus, setSkus] = React.useState([{id:uid(),sku:"",esperado:"",recibido:"",danado:"",notaDano:""}]);
-  const [obsGeneral, setObsGeneral] = React.useState("");
-  const [saving, setSaving] = React.useState(false);
-  const [saved, setSaved] = React.useState(false);
-  const [showCopyModal, setShowCopyModal] = React.useState(false);
-  const [copied, setCopied] = React.useState(false);
-
-  React.useEffect(()=>{
-    const off = fbOn("contenedores", data=>setContenedores(data||{}));
-    return off;
-  },[]);
-
-  const addSku = () => setSkus(s=>[...s,{id:uid(),sku:"",esperado:"",recibido:"",danado:"",notaDano:""}]);
-  const removeSku = (id) => setSkus(s=>s.filter(x=>x.id!==id));
-  const updateSku = (id,field,val) => setSkus(s=>s.map(x=>x.id===id?{...x,[field]:val}:x));
-
-  const resetForm = () => {
-    setNumContenedor(""); setTransportista(""); setObsGeneral("");
-    setSkus([{id:uid(),sku:"",esperado:"",recibido:"",danado:"",notaDano:""}]);
-    setSaved(false);
-  };
-
-  const handleGuardar = async () => {
-    if (!numContenedor.trim() || !clienteContKey) return;
-    setSaving(true);
-    const clienteNombre = CLIENTES[clienteContKey]?.nombre||clienteContKey;
-    await fbPush("contenedores",{
-      cliente: clienteContKey,
-      clienteNombre,
-      numContenedor: numContenedor.trim().toUpperCase(),
-      transportista: transportista.trim(),
-      fecha: dateStr(), hora: ts(), ts: Date.now(),
-      skus: skus.filter(s=>s.sku.trim()).map(s=>({
-        sku: s.sku.trim().toUpperCase(),
-        esperado: Number(s.esperado)||0,
-        recibido: Number(s.recibido)||0,
-        danado: Number(s.danado)||0,
-        notaDano: s.notaDano.trim(),
-        diferencia: (Number(s.recibido)||0)-(Number(s.esperado)||0),
-      })),
-      obsGeneral: obsGeneral.trim(),
-    });
-    setSaving(false); setSaved(true);
-    setTimeout(()=>{ resetForm(); setVistaRec("lista"); },1500);
-  };
-
-  const deleteContenedor = async () => {
-    await fbDel(`contenedores/${confirmDelCont}`);
-    setConfirmDelCont(null);
-    if (selectedId===confirmDelCont) { setSelectedId(null); setVistaRec("lista"); }
-  };
-
-  const buildCSVContenedor = (cont) => {
-    if(!cont) return "";
-    const header = "SKU,Esperado,Recibido,Danado,Diferencia,Nota_Dano";
-    const rows = (cont.skus||[]).map(s=>
-      `${s.sku},${s.esperado},${s.recibido},${s.danado||0},${s.diferencia},"${(s.notaDano||"").replace(/"/g,'""')}"`
-    );
-    return [`Contenedor: ${cont.numContenedor}`,`Cliente: ${cont.clienteNombre}`,
-      `Fecha: ${cont.fecha} ${cont.hora}`,`Transportista: ${cont.transportista||"—"}`,
-      `Observaciones: ${cont.obsGeneral||"—"}`,"",header,...rows].join("\n");
-  };
-
-  const handleCopyCont = (cont) => {
-    const text = buildCSVContenedor(cont); if(!text) return;
-    if(navigator.clipboard) navigator.clipboard.writeText(text).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),2000);});
-    else{const ta=document.createElement("textarea");ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand("copy");document.body.removeChild(ta);setCopied(true);setTimeout(()=>setCopied(false),2000);}
-  };
-
-  const exportCSVCont = (cont) => {
-    const text=buildCSVContenedor(cont); if(!text) return;
-    try{const blob=new Blob([text],{type:"text/csv"});const a=document.createElement("a");
-      a.href=URL.createObjectURL(blob);
-      a.download=`contenedor_${cont.numContenedor}_${cont.fecha.replace(/\//g,"-")}.csv`;a.click();}catch(e){console.error(e);}
-  };
-
-  const contList = Object.entries(contenedores).sort((a,b)=>(b[1].ts||0)-(a[1].ts||0));
-  const selectedCont = selectedId ? contenedores[selectedId] : null;
-
-  const hasDanos = (cont) => (cont.skus||[]).some(s=>s.danado>0||s.notaDano);
-  const hasDiferencias = (cont) => (cont.skus||[]).some(s=>s.diferencia!==0);
-
-  return (
-    <div style={S.root}>
-      {confirmDelCont && (
-        <ConfirmModal title="¿Eliminar registro?" message="Se eliminará el registro de este contenedor. Esta acción no se puede deshacer."
-          confirmLabel="Sí, eliminar" onConfirm={deleteContenedor} onCancel={()=>setConfirmDelCont(null)}/>
-      )}
-      {showCopyModal && selectedCont && (
-        <div style={{position:"fixed",inset:0,background:"#000000EE",zIndex:400,display:"flex",alignItems:"center",justifyContent:"center",padding:20}}>
-          <div style={{background:"#1C2030",border:"2px solid #4A4D5A",borderRadius:18,padding:"24px 20px",width:"100%",maxWidth:480}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-              <p style={{color:"#FFFFFF",fontSize:15,fontWeight:800}}>Reporte CSV</p>
-              <button style={{...S.navBtn,fontSize:12}} onClick={()=>setShowCopyModal(false)}>✕ Cerrar</button>
-            </div>
-            <textarea readOnly style={{...S.inp,height:200,resize:"none",fontSize:11,lineHeight:1.6,fontFamily:"monospace"}}
-              value={buildCSVContenedor(selectedCont)} onFocus={e=>e.target.select()}/>
-            <button style={{...S.solidBtn,background:copied?"#00E6A8":accentColor,color:"#000",marginTop:12,fontSize:15}} onClick={()=>handleCopyCont(selectedCont)}>
-              {copied?"✓ Copiado":"📋 Copiar reporte"}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* NAV */}
-      <div style={{...S.nav,borderColor:accentColor}}>
-        <button style={S.navBtn} onClick={vistaRec==="lista"?onBack:()=>{setVistaRec("lista");setSelectedId(null);}}>← {vistaRec==="lista"?"Salir":"Volver"}</button>
-        <div style={{flex:1}}>
-          <div style={{color:accentColor,fontWeight:900,fontSize:15,letterSpacing:1}}>RECEPCIONISTA</div>
-          <div style={{color:"#D0D4E8",fontSize:11,fontWeight:600}}>Validación de contenedores</div>
-        </div>
-        {vistaRec==="lista" && (
-          <button style={{...S.navBtn,background:"#69CAFF",color:"#000",border:"none",fontWeight:900}}
-            onClick={()=>{resetForm();setVistaRec("nuevo");}}>+ Nuevo</button>
-        )}
-      </div>
-
-      {/* ── LISTA DE CONTENEDORES ── */}
-      {vistaRec==="lista" && (
-        <div style={{padding:"16px",display:"flex",flexDirection:"column",gap:10}}>
-          <span style={S.secLbl}>Contenedores registrados ({contList.length})</span>
-          {contList.length===0 && (
-            <div style={{border:"2px dashed #3A3D4A",borderRadius:12,padding:"32px",textAlign:"center"}}>
-              <p style={{color:"#6A6F82",fontSize:14}}>No hay contenedores registrados</p>
-              <p style={{color:"#4A4D5A",fontSize:12,marginTop:6}}>Presiona "+ Nuevo" para registrar uno</p>
-            </div>
-          )}
-          {contList.map(([id,cont])=>{
-            const danos = hasDanos(cont);
-            const difs = hasDiferencias(cont);
-            const c = CLIENTES[cont.cliente];
-            return (
-              <div key={id}
-                style={{background:"#1C2030",border:`2px solid ${danos?"#FF5555":difs?"#FFD166":"#3A3D4A"}`,borderRadius:14,padding:"14px",cursor:"pointer"}}
-                onClick={()=>{setSelectedId(id);setVistaRec("detalle");}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-                  <div>
-                    <div style={{color:"#FFFFFF",fontWeight:900,fontSize:16}}>📦 {cont.numContenedor}</div>
-                    <div style={{color:c?c.color:"#C8AEFF",fontSize:13,fontWeight:700,marginTop:3}}>{cont.clienteNombre}</div>
-                    <div style={{color:"#8A8FA8",fontSize:11,marginTop:3}}>{cont.fecha} · {cont.hora}</div>
-                  </div>
-                  <div style={{display:"flex",flexDirection:"column",gap:4,alignItems:"flex-end"}}>
-                    {danos && <span style={{fontSize:11,fontWeight:800,color:"#FF5555",background:"#FF555520",border:"1px solid #FF5555",borderRadius:6,padding:"2px 8px"}}>⚠ Daños</span>}
-                    {difs && !danos && <span style={{fontSize:11,fontWeight:800,color:"#FFD166",background:"#FFD16620",border:"1px solid #FFD166",borderRadius:6,padding:"2px 8px"}}>≠ Diferencias</span>}
-                    {!danos && !difs && <span style={{fontSize:11,fontWeight:800,color:"#00E6A8",background:"#00E6A820",border:"1px solid #00E6A8",borderRadius:6,padding:"2px 8px"}}>✓ OK</span>}
-                    <span style={{color:"#6A6F82",fontSize:18}}>→</span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* ── DETALLE CONTENEDOR ── */}
-      {vistaRec==="detalle" && selectedCont && (
-        <div style={{padding:"16px",display:"flex",flexDirection:"column",gap:12}}>
-          <div style={{background:"#1C2030",border:"2px solid #3A3D4A",borderRadius:14,padding:"16px"}}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
-              <div>
-                <div style={{color:accentColor,fontWeight:900,fontSize:20}}>📦 {selectedCont.numContenedor}</div>
-                <div style={{color:CLIENTES[selectedCont.cliente]?.color||"#C8AEFF",fontSize:14,fontWeight:700,marginTop:3}}>{selectedCont.clienteNombre}</div>
-                <div style={{color:"#8A8FA8",fontSize:12,marginTop:3}}>{selectedCont.fecha} · {selectedCont.hora}</div>
-                {selectedCont.transportista && <div style={{color:"#C0C4D8",fontSize:12,marginTop:2}}>🚛 {selectedCont.transportista}</div>}
-              </div>
-              <button style={{background:"#2A1515",border:"2px solid #FF5555",color:"#FF5555",borderRadius:8,padding:"8px 12px",fontSize:12,fontWeight:800,cursor:"pointer",fontFamily:"inherit"}}
-                onClick={()=>setConfirmDelCont(selectedId)}>🗑 Eliminar</button>
-            </div>
-            {selectedCont.obsGeneral && (
-              <div style={{background:"#0E1016",border:"1px solid #3A3D4A",borderRadius:8,padding:"10px 12px",marginBottom:12}}>
-                <span style={{color:"#A0A4B8",fontSize:12,fontWeight:700}}>OBS: </span>
-                <span style={{color:"#E0E4F8",fontSize:13}}>{selectedCont.obsGeneral}</span>
-              </div>
-            )}
-          </div>
-
-          {/* SKUs */}
-          {(selectedCont.skus||[]).map((s,i)=>{
-            const status = s.danado>0?"dano":s.diferencia>0?"exceso":s.diferencia<0?"faltante":"ok";
-            const statusCfg = {
-              ok:{color:"#00E6A8",label:"✓ OK"},
-              dano:{color:"#FF5555",label:"⚠ Daño"},
-              exceso:{color:"#FFD166",label:"↑ Exceso"},
-              faltante:{color:"#FF9955",label:"↓ Faltante"},
-            }[status];
-            return (
-              <div key={i} style={{background:"#1C2030",border:`2px solid ${statusCfg.color}55`,borderRadius:12,padding:"14px"}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-                  <span style={{color:"#FFFFFF",fontWeight:900,fontSize:15}}>{s.sku}</span>
-                  <span style={{fontSize:11,fontWeight:800,color:statusCfg.color,border:`1px solid ${statusCfg.color}`,borderRadius:6,padding:"2px 8px"}}>{statusCfg.label}</span>
-                </div>
-                <div style={{display:"flex",gap:8}}>
-                  {[["Esperado",s.esperado,"#C0C4D8"],["Recibido",s.recibido,"#FFFFFF"],["Dañado",s.danado,"#FF5555"],["Diferencia",(s.diferencia>0?"+":"")+s.diferencia,s.diferencia===0?"#00E6A8":s.diferencia>0?"#FFD166":"#FF9955"]].map(([lbl,val,col])=>(
-                    <div key={lbl} style={{flex:1,background:"#0E1016",border:"1px solid #2A2D3A",borderRadius:8,padding:"8px",textAlign:"center"}}>
-                      <div style={{fontSize:9,color:"#6A6F82",fontWeight:700,letterSpacing:1,marginBottom:4}}>{lbl.toUpperCase()}</div>
-                      <div style={{fontSize:20,fontWeight:900,color:col}}>{val}</div>
-                    </div>
-                  ))}
-                </div>
-                {s.notaDano && <div style={{marginTop:8,background:"#200F0F",border:"1px solid #FF555544",borderRadius:8,padding:"8px 10px",color:"#FF9955",fontSize:12}}>⚠ {s.notaDano}</div>}
-              </div>
-            );
-          })}
-
-          {/* Export buttons */}
-          <div style={{display:"flex",gap:8,marginTop:4}}>
-            <button style={{...S.solidBtn,background:accentColor,color:"#000",fontSize:14}} onClick={()=>exportCSVCont(selectedCont)}>↓ Descargar CSV</button>
-            <button style={{...S.solidBtn,background:"#2A2D3A",border:"2px solid #6A6F82",color:"#FFFFFF",fontSize:14}} onClick={()=>setShowCopyModal(true)}>📋 Copiar</button>
-          </div>
-        </div>
-      )}
-
-      {/* ── NUEVO CONTENEDOR ── */}
-      {vistaRec==="nuevo" && (
-        <div style={{padding:"16px",display:"flex",flexDirection:"column",gap:14}}>
-          <div style={S.card}>
-            <label style={S.lbl}>Cliente</label>
-            <div style={{display:"flex",flexDirection:"column",gap:6,maxHeight:200,overflowY:"auto",border:"2px solid #2E3240",borderRadius:10,padding:"6px",marginBottom:4}}>
-              {Object.entries(CLIENTES).map(([k,c])=>(
-                <button key={k} style={{borderLeft:`4px solid ${c.color}`,background:clienteContKey===k?c.dark:"transparent",border:"none",borderLeft:`4px solid ${clienteContKey===k?c.color:"#3A3D4A"}`,borderRadius:8,padding:"9px 14px",display:"flex",alignItems:"center",gap:10,cursor:"pointer",textAlign:"left"}}
-                  onClick={()=>setClienteContKey(k)}>
-                  <span style={{width:8,height:8,borderRadius:"50%",background:c.color,flexShrink:0}}/>
-                  <span style={{color:clienteContKey===k?c.color:"#C0C4D8",fontWeight:clienteContKey===k?900:600,fontSize:14}}>{c.nombre}</span>
-                  {clienteContKey===k && <span style={{marginLeft:"auto",color:c.color,fontSize:14}}>✓</span>}
-                </button>
-              ))}
-            </div>
-
-            <label style={{...S.lbl,marginTop:14}}>N° de Contenedor / Sello</label>
-            <input style={S.inp} placeholder="Ej: CONT-2024-001 o #123456"
-              value={numContenedor} onChange={e=>setNumContenedor(e.target.value)}/>
-
-            <label style={{...S.lbl,marginTop:14}}>Transportista (opcional)</label>
-            <input style={S.inp} placeholder="Nombre de la empresa o conductor"
-              value={transportista} onChange={e=>setTransportista(e.target.value)}/>
-          </div>
-
-          {/* SKUs */}
-          <div style={S.card}>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-              <label style={{...S.lbl,margin:0}}>Mercancía recibida</label>
-              <button style={{background:accentColor,border:"none",color:"#000",borderRadius:8,padding:"9px 16px",fontSize:13,fontWeight:900,cursor:"pointer",fontFamily:"inherit"}}
-                onClick={addSku}>+ SKU</button>
-            </div>
-
-            {skus.map((s,i)=>(
-              <div key={s.id} style={{background:"#0E1016",border:"2px solid #2A2D3A",borderRadius:12,padding:"12px",marginBottom:10}}>
-                <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:10}}>
-                  <input style={{...S.inp,flex:1,fontSize:14}} placeholder="SKU o código de barras"
-                    value={s.sku} onChange={e=>updateSku(s.id,"sku",e.target.value)}/>
-                  {skus.length>1 && (
-                    <button style={{background:"#2A1515",border:"2px solid #FF5555",color:"#FF5555",borderRadius:8,padding:"8px 10px",fontSize:13,cursor:"pointer",fontFamily:"inherit"}}
-                      onClick={()=>removeSku(s.id)}>✕</button>
-                  )}
-                </div>
-                <div style={{display:"flex",gap:8,marginBottom:8}}>
-                  {[["esperado","Esperado"],["recibido","Recibido"],["danado","Dañado"]].map(([field,lbl])=>(
-                    <div key={field} style={{flex:1}}>
-                      <div style={{color:"#A0A4B8",fontSize:10,fontWeight:700,letterSpacing:1,marginBottom:5}}>{lbl.toUpperCase()}</div>
-                      <input style={{...S.inp,textAlign:"center",fontSize:20,fontWeight:900}}
-                        type="number" inputMode="numeric" min="0" placeholder="0"
-                        value={s[field]} onChange={e=>updateSku(s.id,field,e.target.value)}/>
-                    </div>
-                  ))}
-                </div>
-                {(Number(s.danado)>0) && (
-                  <div>
-                    <div style={{color:"#FF9955",fontSize:10,fontWeight:700,letterSpacing:1,marginBottom:5}}>NOTA DE DAÑO</div>
-                    <input style={{...S.inp,fontSize:13}} placeholder="Describe el daño observado"
-                      value={s.notaDano} onChange={e=>updateSku(s.id,"notaDano",e.target.value)}/>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-
-          <div style={S.card}>
-            <label style={S.lbl}>Observaciones generales</label>
-            <input style={S.inp} placeholder="Condición del sello, temperatura, incidencias generales..."
-              value={obsGeneral} onChange={e=>setObsGeneral(e.target.value)}/>
-          </div>
-
-          <button style={{...S.solidBtn,background:saved?"#00E6A8":accentColor,color:"#000",fontSize:16,opacity:saving?0.7:1}}
-            onClick={handleGuardar} disabled={saving||!numContenedor.trim()||!clienteContKey}>
-            {saving?"Guardando...":saved?"✓ Contenedor registrado":"Registrar contenedor"}
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-try {
+try{
   ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
-} catch(e) {
+}catch(e){
   console.error(e);
   document.getElementById("root").innerHTML='<div style="padding:40px;color:#FF5555;font-family:monospace;text-align:center"><p style="font-size:18px;font-weight:800">⚠ Error al cargar</p><p style="color:#aaa;margin-top:10px;font-size:13px">Abre F12 para ver el detalle</p><button onclick="location.reload()" style="margin-top:20px;padding:14px 28px;background:#C8AEFF;border:none;border-radius:10px;font-size:16px;cursor:pointer;font-weight:800">Reintentar</button></div>';
 }
-  </script>
+</script>
 </body>
 </html>
