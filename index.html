@@ -47,7 +47,7 @@ const fbOn   = (p,cb) => {
 };
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
-const sanitizeKey = s => s.replace(/[.#$[\]/\s]/g,"-");
+    const sanitizeKey = s => s.replace(/[.#$[\]\s\/]/g,"-");
 const makeKey = (ub,sku) => sanitizeKey(ub+"__"+sku.toUpperCase());
 const ts = () => new Date().toLocaleTimeString("es-MX",{hour:"2-digit",minute:"2-digit"});
 const uid = () => Math.random().toString(36).slice(2,9);
@@ -207,18 +207,21 @@ function App() {
   };
 
   const handleReset = async () => {
-    const snap = await fbGet("/");
+    const [snap, eqs] = await Promise.all([
+      fbGet("/"),
+      clienteKey ? fbGet(eqPath(clienteKey)) : Promise.resolve({})
+    ]);
     if (snap) {
-      const eqs = snap.equipos||{};
-      const cross = buildCrossMap(eqs, snap.registros||{}, snap.validaciones||{});
-      const eqIds = Object.keys(eqs);
+      const safeEqs = eqs||{};
+      const cross = buildCrossMap(safeEqs, snap.registros||{}, snap.validaciones||{});
+      const eqIds = Object.keys(safeEqs);
       await fbSet(`historial/sesion_${Date.now()}`,{
         cliente:snap.sesion?.cliente||"DESCONOCIDO",
         fecha:dateStr(), hora:ts(),
         totalRegistros:cross.length,
         discrepancias:cross.filter(r=>getStatus(r,eqIds)==="discrepancia").length,
         validados:cross.filter(r=>getStatus(r,eqIds)==="validado").length,
-        equipos:eqs, registros:snap.registros||{}, validaciones:snap.validaciones||{},
+        equipos:safeEqs, registros:snap.registros||{}, validaciones:snap.validaciones||{},
       });
     }
     await fbDel("registros");
@@ -529,21 +532,28 @@ function SupervisorView({clienteKey, onBack, onReset}) {
   const [newTeamName, setNewTeamName] = React.useState("");
 
   const fetchAll = React.useCallback(async()=>{
-    const data = await fbGet("/");
+    const [data, eqs] = await Promise.all([
+      fbGet("/"),
+      clienteKey ? fbGet(eqPath(clienteKey)) : Promise.resolve({}),
+    ]);
     setFbData(data||{});
-    setEquipos(data?.equipos||{});
+    setEquipos(eqs||{});
     setLastUpdate(new Date().toLocaleTimeString("es-MX",{hour:"2-digit",minute:"2-digit",second:"2-digit"}));
-  },[]);
+  },[clienteKey]);
 
   React.useEffect(()=>{
-    const off = fbOn("/", data=>{
+    // Listen to registros/validaciones at root
+    const offRoot = fbOn("/", data=>{
       setFbData(data||{});
-      setEquipos(data?.equipos||{});
       setLastUpdate(new Date().toLocaleTimeString("es-MX",{hour:"2-digit",minute:"2-digit",second:"2-digit"}));
     });
+    // Listen to equipos under client path
+    const offEq = clienteKey
+      ? fbOn(eqPath(clienteKey), data=>setEquipos(data||{}))
+      : ()=>{};
     const poll = setInterval(fetchAll,5000);
-    return ()=>{off();clearInterval(poll);};
-  },[fetchAll]);
+    return ()=>{offRoot();offEq();clearInterval(poll);};
+  },[fetchAll, clienteKey]);
 
   const fetchHistorial = React.useCallback(async()=>{
     setHistLoading(true);
