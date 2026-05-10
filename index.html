@@ -801,6 +801,8 @@ function SupervisorView({onBack}){
   const [historial,setHistorial]=React.useState([]);
   const [histLoading,setHistLoading]=React.useState(false);
   const [newTeamName,setNewTeamName]=React.useState("");
+  const [prodPeriodo,setProdPeriodo]=React.useState("actual"); // actual | historico
+  const [prodDetalle,setProdDetalle]=React.useState(null); // empleado name to show detail
   const [listaEmpleados,setListaEmpleados]=React.useState([]);
   const [confirmDelEmp,setConfirmDelEmp]=React.useState(null);
 
@@ -1013,7 +1015,7 @@ function SupervisorView({onBack}){
 
       {/* TABS */}
       <div style={{display:"flex",borderBottom:"2px solid #2E3240",overflowX:"auto"}}>
-        {[["empleados","👥 Empleados"],["conteo","📋 Conteo"],["equipos","⚙️ Equipos"],["historial","🕐 Historial"]].map(([v,l])=>(
+        {[["empleados","👥 Empleados"],["productividad","📊 Productividad"],["conteo","📋 Conteo"],["equipos","⚙️ Equipos"],["historial","🕐 Historial"]].map(([v,l])=>(
           <button key={v} onClick={()=>setVistaPanel(v)}
             style={{flex:1,minWidth:80,padding:"11px 6px",fontSize:12,fontWeight:800,cursor:"pointer",fontFamily:"inherit",border:"none",whiteSpace:"nowrap",
               background:vistaPanel===v?"#1C2030":"transparent",
@@ -1126,6 +1128,167 @@ function SupervisorView({onBack}){
           )}
         </div>
       )}
+
+      {/* ── TAB: PRODUCTIVIDAD ── */}
+      {vistaPanel==="productividad"&&(()=>{
+        // Build productivity data from current registros + historial
+        // Each registro has: empleado, duracionMins, totalPiezas, ubicacion, hora, ts
+        const buildProdData = (registrosObj) => {
+          const byEmp = {};
+          Object.values(registrosObj||{}).forEach(eqRegs=>{
+            Object.values(eqRegs||{}).forEach(reg=>{
+              if(!reg.empleado) return;
+              const emp = reg.empleado;
+              if(!byEmp[emp]) byEmp[emp]={nombre:emp,posiciones:[],totalMins:0,totalPiezas:0};
+              byEmp[emp].posiciones.push({
+                ubicacion:reg.ubicacion,
+                hora:reg.hora||"",
+                mins:reg.duracionMins||0,
+                piezas:reg.totalPiezas||0,
+                skus:(reg.skus||[]).length,
+              });
+              byEmp[emp].totalMins+=reg.duracionMins||0;
+              byEmp[emp].totalPiezas+=reg.totalPiezas||0;
+            });
+          });
+          return Object.values(byEmp).sort((a,b)=>b.totalPiezas-a.totalPiezas);
+        };
+
+        const buildHistProdData = () => {
+          const byEmp = {};
+          historial.forEach(ses=>{
+            Object.values(ses.registros||{}).forEach(eqRegs=>{
+              Object.values(eqRegs||{}).forEach(reg=>{
+                if(!reg.empleado) return;
+                const emp = reg.empleado;
+                if(!byEmp[emp]) byEmp[emp]={nombre:emp,sesiones:0,totalMins:0,totalPiezas:0,posiciones:0};
+                byEmp[emp].totalMins+=reg.duracionMins||0;
+                byEmp[emp].totalPiezas+=reg.totalPiezas||0;
+                byEmp[emp].posiciones+=1;
+              });
+            });
+            // count unique sesiones per emp
+            const empsEnSesion=new Set();
+            Object.values(ses.registros||{}).forEach(eqRegs=>{
+              Object.values(eqRegs||{}).forEach(reg=>{ if(reg.empleado) empsEnSesion.add(reg.empleado); });
+            });
+            empsEnSesion.forEach(emp=>{ if(byEmp[emp]) byEmp[emp].sesiones+=1; });
+          });
+          return Object.values(byEmp).sort((a,b)=>b.totalPiezas-a.totalPiezas);
+        };
+
+        const fmtMins = (m) => {
+          const mins = parseFloat(m)||0;
+          if(mins<1) return Math.round(mins*60)+"s";
+          if(mins<60) return mins.toFixed(1)+"min";
+          return Math.floor(mins/60)+"h "+Math.round(mins%60)+"min";
+        };
+
+        const accentProd = "#F9C74F";
+        const actualData = buildProdData(fbData.registros);
+        const histData = prodPeriodo==="historico" ? buildHistProdData() : [];
+        const data = prodPeriodo==="actual" ? actualData : histData;
+        const detailEmp = prodDetalle ? actualData.find(e=>e.nombre===prodDetalle) : null;
+
+        const exportProdCSV = () => {
+          if(!data.length) return;
+          let lines = prodPeriodo==="actual"
+            ? ["Empleado,Posiciones,Total_Mins,Piezas_por_Min,Total_Piezas"]
+            : ["Empleado,Sesiones,Posiciones,Total_Mins,Total_Piezas"];
+          data.forEach(e=>{
+            const ppm = e.totalMins>0 ? (e.totalPiezas/e.totalMins).toFixed(1) : "0";
+            if(prodPeriodo==="actual") lines.push([e.nombre,(e.posiciones||[]).length,e.totalMins.toFixed(2),ppm,e.totalPiezas].join(","));
+            else lines.push([e.nombre,e.sesiones||0,e.posiciones||0,e.totalMins.toFixed(2),e.totalPiezas].join(","));
+          });
+          if(prodPeriodo==="actual" && detailEmp) {
+            lines.push("","Detalle posiciones - "+detailEmp.nombre,"Ubicacion,Hora,Mins,Piezas,SKUs");
+            detailEmp.posiciones.forEach(p=>lines.push([p.ubicacion,p.hora,p.mins,p.piezas,p.skus].join(",")));
+          }
+          const blob = new Blob([lines.join("\n")],{type:"text/csv"});
+          const a=document.createElement("a");a.href=URL.createObjectURL(blob);
+          a.download="productividad_"+(prodPeriodo)+"_"+new Date().toISOString().slice(0,10)+".csv";a.click();
+        };
+
+        return(
+          <div style={{padding:"14px",display:"flex",flexDirection:"column",gap:14}}>
+            {/* Periodo selector */}
+            <div style={{display:"flex",gap:8}}>
+              {[["actual","📋 Sesión actual"],["historico","🕐 Histórico"]].map(([v,l])=>(
+                <button key={v} onClick={()=>{setProdPeriodo(v);setProdDetalle(null);if(v==="historico"&&!historial.length)fetchHistorial();}}
+                  style={{flex:1,padding:"10px",borderRadius:10,fontSize:13,fontWeight:800,cursor:"pointer",fontFamily:"inherit",border:"2px solid "+(prodPeriodo===v?accentProd:"#3A3D4A"),background:prodPeriodo===v?"#2E2800":"#1C2030",color:prodPeriodo===v?accentProd:"#6A6F82"}}>
+                  {l}
+                </button>
+              ))}
+            </div>
+
+            {/* Export */}
+            {data.length>0&&(
+              <button style={{...S.solidBtn,background:accentProd,color:"#000",fontSize:13}} onClick={exportProdCSV}>↓ Exportar CSV productividad</button>
+            )}
+
+            {/* Resumen por empleado */}
+            {data.length===0?(
+              <div style={{border:"2px dashed #3A3D4A",borderRadius:12,padding:"28px",textAlign:"center"}}>
+                <p style={{color:"#6A6F82",fontSize:13}}>{prodPeriodo==="actual"?"Sin datos en la sesión actual. Los registros deben tener empleado asignado.":"Sin historial disponible."}</p>
+              </div>
+            ):(
+              <>
+                <span style={S.secLbl}>Resumen por empleado</span>
+                {data.map(emp=>{
+                  const nPos = prodPeriodo==="actual"?(emp.posiciones||[]).length:(emp.posiciones||0);
+                  const ppm = emp.totalMins>0?(emp.totalPiezas/emp.totalMins).toFixed(1):"—";
+                  const isSelected = prodDetalle===emp.nombre;
+                  return(
+                    <div key={emp.nombre}
+                      style={{background:"#1C2030",border:"2px solid "+(isSelected?accentProd:"#3A3D4A"),borderRadius:14,padding:"14px",cursor:prodPeriodo==="actual"?"pointer":"default"}}
+                      onClick={()=>prodPeriodo==="actual"&&setProdDetalle(isSelected?null:emp.nombre)}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+                        <div style={{color:"#FFFFFF",fontWeight:900,fontSize:16}}>👤 {emp.nombre}</div>
+                        {prodPeriodo==="actual"&&<span style={{color:accentProd,fontSize:11,fontWeight:700}}>{isSelected?"▲ Ocultar":"▼ Detalle"}</span>}
+                      </div>
+                      <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+                        {[
+                          {l:"Posiciones",v:nPos,c:"#D0D4E8"},
+                          {l:"Tiempo total",v:fmtMins(emp.totalMins),c:"#FFD166"},
+                          {l:"Piezas",v:emp.totalPiezas,c:"#00E6A8"},
+                          {l:"Pzas/min",v:ppm,c:"#C8AEFF"},
+                          ...(prodPeriodo==="historico"?[{l:"Sesiones",v:emp.sesiones||0,c:"#69CAFF"}]:[]),
+                        ].map(st=>(
+                          <div key={st.l} style={{flex:1,minWidth:70,background:"#0E1016",border:"1px solid "+st.c+"44",borderRadius:10,padding:"9px 8px",textAlign:"center"}}>
+                            <div style={{fontSize:st.l==="Tiempo total"?14:18,fontWeight:900,color:st.c}}>{st.v}</div>
+                            <div style={{fontSize:9,color:"#6A6F82",fontWeight:700,marginTop:3,letterSpacing:1}}>{st.l.toUpperCase()}</div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Detalle posiciones */}
+                      {isSelected&&detailEmp&&(
+                        <div style={{marginTop:14,borderTop:"1px solid #2E3240",paddingTop:12}}>
+                          <span style={{...S.secLbl,marginBottom:8}}>Detalle por posición</span>
+                          <div style={{display:"flex",flexDirection:"column",gap:7}}>
+                            {detailEmp.posiciones.sort((a,b)=>b.mins-a.mins).map((p,i)=>(
+                              <div key={i} style={{background:"#0E1016",border:"1px solid #2E3240",borderRadius:9,padding:"9px 12px",display:"flex",alignItems:"center",gap:10}}>
+                                <div style={{flex:1}}>
+                                  <div style={{color:accentProd,fontWeight:900,fontSize:14}}>{p.ubicacion}</div>
+                                  <div style={{color:"#6A6F82",fontSize:10,marginTop:2}}>{p.hora} · {p.skus} SKU{p.skus!==1?"s":""}</div>
+                                </div>
+                                <div style={{textAlign:"right"}}>
+                                  <div style={{color:"#FFD166",fontWeight:800,fontSize:13}}>⏱ {fmtMins(p.mins)}</div>
+                                  <div style={{color:"#00E6A8",fontSize:11,marginTop:2}}>{p.piezas} pzas</div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </>
+            )}
+          </div>
+        );
+      })()}
 
       {/* ── TAB: HISTORIAL ── */}
       {vistaPanel==="historial"&&(
