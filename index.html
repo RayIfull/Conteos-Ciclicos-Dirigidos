@@ -1031,8 +1031,7 @@ function RecepcionistaView({clienteKey, onBack}) {
     );
     return [`Contenedor: ${cont.numContenedor}`,`Cliente: ${cont.clienteNombre}`,
       `Fecha: ${cont.fecha} ${cont.hora}`,`Transportista: ${cont.transportista||"—"}`,
-      `Observaciones: ${cont.obsGeneral||"—"}`,"",header,...rows].join("
-");
+      `Observaciones: ${cont.obsGeneral||"—"}`,"",header,...rows].join("\n");
   };
 
   const handleCopyCont = (cont) => {
