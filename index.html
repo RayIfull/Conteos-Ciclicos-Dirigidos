@@ -806,30 +806,38 @@ function SupervisorView({onBack}){
   const [listaEmpleados,setListaEmpleados]=React.useState([]);
   const [confirmDelEmp,setConfirmDelEmp]=React.useState(null);
 
+  const clienteKeyRef=React.useRef(clienteKey);
+  React.useEffect(()=>{clienteKeyRef.current=clienteKey;},[clienteKey]);
+
   const fetchAll=React.useCallback(async()=>{
-    const [data,eqs,activos,lista]=await Promise.all([
-      fbGet("/"),
-      clienteKey?fbGet(eqPath(clienteKey)):Promise.resolve({}),
-      fbGet("empleados_activos"),
-      fbGet("empleados"),
-    ]);
-    setFbData(data||{});
-    setEquiposPorCliente(prev=>({...prev,[clienteKey]:eqs||{}}));
-    setEmpleadosActivos(activos||{});
-    setListaEmpleados(lista?Object.entries(lista):[]);
-    setLastUpdate(new Date().toLocaleTimeString("es-MX",{hour:"2-digit",minute:"2-digit",second:"2-digit"}));
-  },[clienteKey]);
+    try{
+      const ck=clienteKeyRef.current;
+      const [data,eqs,activos,lista]=await Promise.all([
+        fbGet("/"),
+        ck?fbGet(eqPath(ck)):Promise.resolve({}),
+        fbGet("empleados_activos"),
+        fbGet("empleados"),
+      ]);
+      setFbData(data||{});
+      if(ck) setEquiposPorCliente(prev=>({...prev,[ck]:eqs||{}}));
+      setEmpleadosActivos(activos||{});
+      setListaEmpleados(lista?Object.entries(lista):[]);
+      setLastUpdate(new Date().toLocaleTimeString("es-MX",{hour:"2-digit",minute:"2-digit",second:"2-digit"}));
+    }catch(e){console.error("fetchAll error",e);}
+  },[]); // stable - uses ref for clienteKey
 
   React.useEffect(()=>{
+    // Realtime listeners - no polling loop dependency
     const offRoot=fbOn("/",data=>{
       setFbData(data||{});
       setLastUpdate(new Date().toLocaleTimeString("es-MX",{hour:"2-digit",minute:"2-digit",second:"2-digit"}));
     });
     const offActivos=fbOn("empleados_activos",data=>setEmpleadosActivos(data||{}));
     const offLista=fbOn("empleados",data=>setListaEmpleados(data?Object.entries(data):[]));
-    const poll=setInterval(fetchAll,5000);
+    // Poll every 8s as fallback only
+    const poll=setInterval(()=>fetchAll(),8000);
     return()=>{offRoot();offActivos();offLista();clearInterval(poll);};
-  },[fetchAll]);
+  },[]); // runs once on mount
 
   React.useEffect(()=>{
     if(!clienteKey) return;
@@ -944,14 +952,14 @@ function SupervisorView({onBack}){
     setSaving(s=>({...s,[key]:false}));
   };
 
-  const fetchHistorial=React.useCallback(async()=>{
+  const fetchHistorial=async()=>{
     setHistLoading(true);
     const data=await fbGet("historial");
     if(data) setHistorial(Object.entries(data).map(([id,s])=>({id,...s})).sort((a,b)=>b.id.localeCompare(a.id)));
     else setHistorial([]);
     setHistLoading(false);
-  },[]);
-  React.useEffect(()=>{if(vistaPanel==="historial") fetchHistorial();},[vistaPanel,fetchHistorial]);
+  };
+  React.useEffect(()=>{if(vistaPanel==="historial") fetchHistorial();},[vistaPanel]);
 
   const statBtns=[
     {k:"all",label:"Total",val:cross.length,color:"#D0D4E8"},
